@@ -1,0 +1,521 @@
+page 1706 (
+    name: Planificación de Producción
+    alias: PLANIFICACION-DE-PRODUCCION
+    title: Planificación de Producción
+    appearance {
+        pageTemplate: @standard
+        templateOptions: #DEFAULT#
+    }
+    navigation {
+        cursorFocus: doNotFocusCursor
+    }
+    security {
+        authorizationScheme: @derecho-pagina-2
+        pageAccessProtection: argumentsMustHaveChecksum
+        formAutoComplete: false
+    }
+
+    region filtros (
+        name: Parámetros de la planificación
+        type: staticContent
+        layout {
+            sequence: 10
+            slot: body
+        }
+        appearance {
+            template: @standard
+            templateOptions: [
+                #DEFAULT#
+                t-Region--scrollBody
+            ]
+        }
+    )
+
+    region sugerencia (
+        name: Sugerencia de producción (no mueve stock: genera una orden pendiente)
+        type: classicReport
+        source {
+            location: localDatabase
+            type: sqlQuery
+            sqlQuery:
+                ```sql
+                with ventas as (
+                   select d.id_articulo,
+                          sum(case c.tip_comprobante when 'NCR' then -1 else 1 end * d.cantidad_ub) cantidad
+                     from vtw_comprobantes_cabecera c
+                     join vtw_comprobantes_detalle d on d.id_comprobante_cabecera = c.id
+                    where c.id_empresa = :P0_ID_EMPRESA
+                      and c.tip_comprobante in ('FVE', 'NCR')
+                      and nvl(c.estado, 'X') != 'A'
+                      and c.fec_comprobante >= to_date(:P1706_FECHA) - to_number(:P1706_DIAS_HISTORIA)
+                      and c.fec_comprobante < to_date(:P1706_FECHA)
+                      and (:P1706_ID_SUCURSAL is null or c.id_sucursal = :P1706_ID_SUCURSAL)
+                    group by d.id_articulo
+                ), base as (
+                   select f.id id_formula,
+                          f.cod_formula,
+                          f.comentario,
+                          a.cod_articulo || ' - ' || a.descripcion articulo,
+                          round(nvl(v.cantidad, 0) / to_number(:P1706_DIAS_HISTORIA), 2) promedio_diario,
+                          (select nvl(sum(e.cant_dispon), 0)
+                             from stw_existencia_art e
+                            where e.id_empresa = :P0_ID_EMPRESA
+                              and e.id_articulo = a.id
+                              and (:P1706_ID_SUCURSAL is null or e.id_sucursal = :P1706_ID_SUCURSAL)) existencia,
+                          (select nvl(sum(p.cantidad - nvl(p.cant_procesada, 0)), 0)
+                             from pdw_produccion_producido p
+                             join pdw_produccion_cab pc on pc.id = p.id_produccion_cab
+                            where pc.id_empresa = to_char(:P0_ID_EMPRESA)
+                              and nvl(pc.estado, 'P') = 'P'
+                              and nvl(pc.anulado, 'N') = 'N'
+                              and p.id_articulo = a.id) pendiente
+                     from pdw_formula_cab f
+                     join stw_articulos a on a.id = f.id_articulo
+                     left join ventas v on v.id_articulo = a.id
+                    where f.id_empresa = to_char(:P0_ID_EMPRESA)
+                      and f.estado = 'S'
+                )
+                select apex_item.checkbox2(1, b.id_formula) sel,
+                       b.cod_formula,
+                       b.comentario,
+                       b.articulo,
+                       b.promedio_diario,
+                       b.existencia,
+                       b.pendiente,
+                       greatest(ceil(b.promedio_diario * to_number(:P1706_DIAS_COBERTURA) - greatest(b.existencia, 0) - greatest(b.pendiente, 0)), 0) sugerido,
+                       apex_item.text(2, greatest(ceil(b.promedio_diario * to_number(:P1706_DIAS_COBERTURA) - greatest(b.existencia, 0) - greatest(b.pendiente, 0)), 0), 8)
+                       || apex_item.hidden(3, b.id_formula) cantidad
+                  from base b
+                 order by greatest(ceil(b.promedio_diario * to_number(:P1706_DIAS_COBERTURA) - greatest(b.existencia, 0) - greatest(b.pendiente, 0)), 0) desc,
+                          b.articulo
+                ```
+            pageItemsToSubmit: [
+                P1706_FECHA
+                P1706_DIAS_HISTORIA
+                P1706_DIAS_COBERTURA
+                P1706_ID_SUCURSAL
+            ]
+        }
+        layout {
+            sequence: 20
+            slot: body
+        }
+        appearance {
+            template: @standard
+            templateOptions: [
+                #DEFAULT#
+                t-Region--scrollBody
+            ]
+        }
+        security {
+            authorizationScheme: @derechos-consultar
+        }
+        serverSideCondition {
+            type: itemIsNotNull
+            item: P1706_DIAS_HISTORIA
+        }
+        reportLayout {
+            numberOfRows: 200
+        }
+        componentAppearance {
+            template: @standard
+            templateOptions: [
+                #DEFAULT#
+                t-Report--stretch
+                t-Report--rowHighlight
+            ]
+        }
+        pagination {
+            type: rowRangesXToYOfZWithPagination
+            displayPosition: bottomRight
+        }
+        messages {
+            whenNoDataFound: Sin fórmulas activas.
+        }
+
+        column SEL (
+            reportColumnQueryId: 1
+            derivedColumn: N
+            heading {
+                heading: Sel.
+            }
+            layout {
+                sequence: 10
+            }
+            security {
+                escapeSpecialChars: false
+            }
+        )
+
+        column COD_FORMULA (
+            reportColumnQueryId: 2
+            derivedColumn: N
+            heading {
+                heading: Fórmula
+            }
+            layout {
+                sequence: 20
+            }
+        )
+
+        column COMENTARIO (
+            reportColumnQueryId: 3
+            derivedColumn: N
+            heading {
+                heading: Descripción
+            }
+            layout {
+                sequence: 30
+            }
+        )
+
+        column ARTICULO (
+            reportColumnQueryId: 4
+            derivedColumn: N
+            heading {
+                heading: Producto
+            }
+            layout {
+                sequence: 40
+            }
+        )
+
+        column PROMEDIO_DIARIO (
+            reportColumnQueryId: 5
+            derivedColumn: N
+            heading {
+                heading: Venta diaria prom.
+                alignment: end
+            }
+            layout {
+                sequence: 50
+                columnAlignment: end
+            }
+            appearance {
+                formatMask: 999G999G999G990D00
+            }
+        )
+
+        column EXISTENCIA (
+            reportColumnQueryId: 6
+            derivedColumn: N
+            heading {
+                heading: Existencia
+                alignment: end
+            }
+            layout {
+                sequence: 60
+                columnAlignment: end
+            }
+            appearance {
+                formatMask: 999G999G999G990D00
+            }
+        )
+
+        column PENDIENTE (
+            reportColumnQueryId: 7
+            derivedColumn: N
+            heading {
+                heading: En órdenes pendientes
+                alignment: end
+            }
+            layout {
+                sequence: 70
+                columnAlignment: end
+            }
+            appearance {
+                formatMask: 999G999G999G990D00
+            }
+        )
+
+        column SUGERIDO (
+            reportColumnQueryId: 8
+            derivedColumn: N
+            heading {
+                heading: Sugerido
+                alignment: end
+            }
+            layout {
+                sequence: 80
+                columnAlignment: end
+            }
+            appearance {
+                formatMask: 999G999G999G990
+            }
+        )
+
+        column CANTIDAD (
+            reportColumnQueryId: 9
+            derivedColumn: N
+            heading {
+                heading: A producir
+            }
+            layout {
+                sequence: 90
+            }
+            security {
+                escapeSpecialChars: false
+            }
+        )
+    )
+
+    pageItem P1706_FECHA (
+        type: datePicker
+        label {
+            label: Fecha a planificar
+        }
+        layout {
+            sequence: 10
+            region: @filtros
+            slot: regionBody
+            columnSpan: 2
+        }
+        appearance {
+            template: @required
+            templateOptions: #DEFAULT#
+        }
+        validation {
+            valueRequired: true
+        }
+        default {
+            type: expression
+            plsqlExpression: trunc(sysdate)
+        }
+    )
+
+    pageItem P1706_DIAS_HISTORIA (
+        type: numberField
+        label {
+            label: Días de ventas a considerar
+        }
+        layout {
+            sequence: 20
+            region: @filtros
+            slot: regionBody
+            startNewRow: false
+            columnSpan: 2
+        }
+        appearance {
+            template: @required
+            templateOptions: #DEFAULT#
+        }
+        help {
+            helpText: Ventana de ventas pasadas sobre la que se calcula el promedio diario. No tiene valor por defecto: la define el área de producción.
+        }
+    )
+
+    pageItem P1706_DIAS_COBERTURA (
+        type: numberField
+        label {
+            label: Días a cubrir
+        }
+        layout {
+            sequence: 30
+            region: @filtros
+            slot: regionBody
+            startNewRow: false
+            columnSpan: 2
+        }
+        appearance {
+            template: @required
+            templateOptions: #DEFAULT#
+        }
+        default {
+            type: static
+            staticValue: 1
+        }
+    )
+
+    pageItem P1706_ID_SUCURSAL (
+        type: selectList
+        label {
+            label: Sucursal
+        }
+        lov {
+            type: sharedComponent
+            lov: @lv-sucursales
+            displayNullValue: true
+            nullDisplayValue: Todas
+        }
+        layout {
+            sequence: 40
+            region: @filtros
+            slot: regionBody
+            startNewRow: false
+            columnSpan: 3
+        }
+        appearance {
+            template: @optional
+            templateOptions: #DEFAULT#
+        }
+    )
+
+    pageItem P1706_ID_PRODUCCION (
+        type: hidden
+        settings {
+            valueProtected: true
+        }
+        layout {
+            sequence: 50
+            region: @filtros
+            slot: regionBody
+        }
+    )
+
+    button calcular (
+        buttonName: CALCULAR
+        label: Calcular sugerencia
+        layout {
+            sequence: 10
+            region: @filtros
+            slot: regionBody
+        }
+        appearance {
+            buttonTemplate: @text-with-icon
+            templateOptions: [
+                #DEFAULT#
+                t-Button--iconLeft
+            ]
+            icon: fa-calculator
+        }
+        behavior {
+            warnOnUnsavedChanges: doNotCheck
+        }
+    )
+
+    button crear-orden (
+        buttonName: CREAR_ORDEN
+        label: Crear orden con lo seleccionado
+        layout {
+            sequence: 10
+            region: @sugerencia
+            slot: create
+        }
+        appearance {
+            buttonTemplate: @text-with-icon
+            hot: true
+            templateOptions: [
+                #DEFAULT#
+                t-Button--iconLeft
+            ]
+            icon: fa-industry
+        }
+        behavior {
+            warnOnUnsavedChanges: doNotCheck
+            requiresConfirmation: true
+        }
+        confirmation {
+            message: Se creará una orden de producción pendiente con las fórmulas seleccionadas. ¿Continuar?
+            style: warning
+        }
+        serverSideCondition {
+            type: itemIsNotNull
+            item: P1706_DIAS_HISTORIA
+        }
+        security {
+            authorizationScheme: @derechos-insertar-2
+        }
+    )
+
+    validation dias-historia (
+        name: Días de ventas
+        execution {
+            sequence: 10
+        }
+        validation {
+            type: expression
+            plsqlExpression: to_number(:P1706_DIAS_HISTORIA) > 0
+        }
+        error {
+            errorMessage: Indique cuántos días de ventas considerar (mayor que cero).
+            displayLocation: inlineWithFieldAndInNotification
+            associatedItem: @P1706_DIAS_HISTORIA
+        }
+    )
+
+    validation dias-cobertura (
+        name: Días a cubrir
+        execution {
+            sequence: 20
+        }
+        validation {
+            type: expression
+            plsqlExpression: to_number(:P1706_DIAS_COBERTURA) > 0
+        }
+        error {
+            errorMessage: Indique cuántos días cubrir (mayor que cero).
+            displayLocation: inlineWithFieldAndInNotification
+            associatedItem: @P1706_DIAS_COBERTURA
+        }
+    )
+
+    process crear-orden (
+        name: Crear orden de producción
+        type: executeCode
+        source {
+            plsqlCode:
+                ```plsql
+                declare
+                   l_id_produccion pdw_produccion_cab.id%type;
+                   l_indice        pls_integer;
+                   l_cantidad      number;
+                begin
+                   if apex_application.g_f01.count = 0 then
+                      raise_application_error(-20100, 'Seleccione al menos una fórmula.');
+                   end if;
+                   for i in 1 .. apex_application.g_f01.count loop
+                      l_indice := null;
+                      for j in 1 .. apex_application.g_f03.count loop
+                         if apex_application.g_f03(j) = apex_application.g_f01(i) then
+                            l_indice := j;
+                            exit;
+                         end if;
+                      end loop;
+                      l_cantidad := to_number(apex_application.g_f02(l_indice));
+                      if nvl(l_cantidad, 0) > 0 then
+                         prwk_produccion.agregar_a_orden(p_id_empresa    => :P0_ID_EMPRESA,
+                                                         p_id_sucursal   => nvl(:P1706_ID_SUCURSAL, :P0_ID_SUCURSAL),
+                                                         p_fecha         => to_date(:P1706_FECHA),
+                                                         p_id_formula    => to_number(apex_application.g_f01(i)),
+                                                         p_cantidad      => l_cantidad,
+                                                         p_id_produccion => l_id_produccion);
+                      end if;
+                   end loop;
+                   if l_id_produccion is null then
+                      raise_application_error(-20100, 'Las fórmulas seleccionadas no tienen cantidad a producir.');
+                   end if;
+                   :P1706_ID_PRODUCCION := l_id_produccion;
+                end;
+                ```
+        }
+        execution {
+            sequence: 10
+        }
+        successMessage {
+            successMessage: Orden de producción creada en estado pendiente.
+        }
+        serverSideCondition {
+            whenButtonPressed: @crear-orden
+        }
+    )
+
+    branch (
+        name: Ir a la orden creada
+        execution {
+            sequence: 10
+            point: afterProcessing
+        }
+        behavior {
+            target: {
+                page: 741
+                items: {
+                    P741_ID: &P1706_ID_PRODUCCION.
+                }
+            }
+        }
+        serverSideCondition {
+            whenButtonPressed: @crear-orden
+        }
+    )
+
+)

@@ -1,0 +1,819 @@
+page 1701 (
+    name: Carga de Artículo Compuesto
+    alias: CARGA-DE-ARTICULO-COMPUESTO
+    title: Artículo Compuesto
+    appearance {
+        pageMode: modalDialog
+        dialogTemplate: @modal-dialog
+        templateOptions: #DEFAULT#
+    }
+    dialog {
+        width: 1100
+        height: 720
+        chained: false
+    }
+    navigation {
+        cursorFocus: doNotFocusCursor
+    }
+    security {
+        authorizationScheme: @derecho-pagina-2
+        pageAccessProtection: argumentsMustHaveChecksum
+        formAutoComplete: false
+    }
+
+    region buttons (
+        name: Buttons
+        type: staticContent
+        layout {
+            sequence: 20
+            slot: dialogFooter
+        }
+        appearance {
+            template: @buttons-container
+            templateOptions: #DEFAULT#
+        }
+        settings {
+            outputAs: text
+        }
+    )
+
+    region compuesto (
+        name: Genérico de producción
+        type: form
+        source {
+            location: localDatabase
+            tableName: PRW_COMPUESTOS_CABECERA
+            whereClause: ID_EMPRESA = :P0_ID_EMPRESA
+        }
+        layout {
+            sequence: 10
+            slot: contentBody
+        }
+        appearance {
+            template: @standard
+            templateOptions: [
+                #DEFAULT#
+                t-Region--scrollBody
+            ]
+        }
+        security {
+            authorizationScheme: @derechos-consultar
+        }
+        edit {
+            enabled: true
+            allowedOperations: [
+                add
+                update
+                delete
+            ]
+        }
+        editAuthorization {
+            add: @derechos-insertar-2
+            update: @derechos-actualizar-2
+            delete: @derechos-borrar-2
+        }
+    )
+
+    region marcas (
+        name: Marcas que lo reemplazan
+        type: interactiveGrid
+        source {
+            location: localDatabase
+            tableName: PRW_COMPUESTOS_DETALLE
+            whereClause: ID_COMPUESTO = :P1701_ID
+            pageItemsToSubmit: P1701_ID
+        }
+        layout {
+            sequence: 20
+            slot: contentBody
+        }
+        appearance {
+            template: @standard
+            templateOptions: [
+                #DEFAULT#
+                t-Region--scrollBody
+            ]
+        }
+        advanced {
+            htmlDomId: Marcas
+        }
+        edit {
+            enabled: true
+            allowedOperations: [
+                add
+                update
+                delete
+            ]
+        }
+        toolbar {
+            controls: actionsMenu
+        }
+
+        savedReport primary (
+            visibility: primary
+            view {
+                default: grid
+            }
+            singleRowView {
+                displayedColumns: true
+            }
+        )
+
+        column APEX$ROW_ACTION (
+            type: actionsMenu
+            layout {
+                sequence: 10
+            }
+        )
+
+        column APEX$ROW_SELECTOR (
+            type: rowSelector
+            layout {
+                sequence: 20
+            }
+        )
+
+        column ID (
+            type: hidden
+            layout {
+                sequence: 30
+            }
+            source {
+                databaseColumn: ID
+                dataType: number
+                primaryKey: true
+            }
+        )
+
+        column ID_EMPRESA (
+            type: hidden
+            layout {
+                sequence: 40
+            }
+            source {
+                databaseColumn: ID_EMPRESA
+                dataType: number
+            }
+            default {
+                type: expression
+                plsqlExpression: :P0_ID_EMPRESA
+            }
+        )
+
+        column ID_COMPUESTO (
+            type: hidden
+            layout {
+                sequence: 50
+            }
+            source {
+                databaseColumn: ID_COMPUESTO
+                dataType: number
+            }
+        )
+
+        column ID_PRODUCTO (
+            type: popupLov
+            heading {
+                heading: Marca (artículo de compra)
+            }
+            settings {
+                displayAs: modalDialog
+            }
+            lov {
+                type: sharedComponent
+                lov: @lv-articulos-descripcion
+            }
+            layout {
+                sequence: 60
+            }
+            validation {
+                valueRequired: true
+            }
+            source {
+                databaseColumn: ID_PRODUCTO
+                dataType: number
+            }
+        )
+
+        column FACTOR_UB (
+            type: numberField
+            heading {
+                heading: Unidades del genérico por unidad de la marca
+                alignment: end
+            }
+            layout {
+                sequence: 70
+                columnAlignment: end
+            }
+            validation {
+                valueRequired: true
+            }
+            source {
+                databaseColumn: FACTOR_UB
+                dataType: number
+            }
+        )
+
+        column ESTADO (
+            type: selectList
+            heading {
+                heading: Estado
+            }
+            lov {
+                type: staticValues
+                staticValues: STATIC:Activa;A,Inactiva;I
+                displayNullValue: false
+            }
+            layout {
+                sequence: 80
+            }
+            source {
+                databaseColumn: ESTADO
+                dataType: varchar2
+            }
+            default {
+                type: static
+                staticValue: A
+            }
+        )
+    )
+
+    region sucursales (
+        name: Sucursales habilitadas
+        type: interactiveGrid
+        source {
+            location: localDatabase
+            tableName: PRW_COMPUESTOS_SUCURSALES
+            whereClause: ID_COMPUESTO = :P1701_ID
+            pageItemsToSubmit: P1701_ID
+        }
+        layout {
+            sequence: 30
+            slot: contentBody
+        }
+        appearance {
+            template: @standard
+            templateOptions: [
+                #DEFAULT#
+                t-Region--scrollBody
+            ]
+        }
+        advanced {
+            htmlDomId: Sucursales
+        }
+        edit {
+            enabled: true
+            allowedOperations: [
+                add
+                update
+                delete
+            ]
+        }
+        toolbar {
+            controls: actionsMenu
+        }
+
+        savedReport primary (
+            visibility: primary
+            view {
+                default: grid
+            }
+            singleRowView {
+                displayedColumns: true
+            }
+        )
+
+        column APEX$ROW_ACTION (
+            type: actionsMenu
+            layout {
+                sequence: 10
+            }
+        )
+
+        column APEX$ROW_SELECTOR (
+            type: rowSelector
+            layout {
+                sequence: 20
+            }
+        )
+
+        column ID (
+            type: hidden
+            layout {
+                sequence: 30
+            }
+            source {
+                databaseColumn: ID
+                dataType: number
+                primaryKey: true
+            }
+        )
+
+        column ID_EMPRESA (
+            type: hidden
+            layout {
+                sequence: 40
+            }
+            source {
+                databaseColumn: ID_EMPRESA
+                dataType: number
+            }
+            default {
+                type: expression
+                plsqlExpression: :P0_ID_EMPRESA
+            }
+        )
+
+        column ID_COMPUESTO (
+            type: hidden
+            layout {
+                sequence: 50
+            }
+            source {
+                databaseColumn: ID_COMPUESTO
+                dataType: number
+            }
+        )
+
+        column ID_SUCURSAL (
+            type: selectList
+            heading {
+                heading: Sucursal
+            }
+            lov {
+                type: sharedComponent
+                lov: @lv-sucursales
+                displayNullValue: false
+            }
+            layout {
+                sequence: 60
+            }
+            validation {
+                valueRequired: true
+            }
+            source {
+                databaseColumn: ID_SUCURSAL
+                dataType: number
+            }
+        )
+    )
+
+    pageItem P1701_ID (
+        type: hidden
+        layout {
+            sequence: 10
+            region: @compuesto
+            slot: regionBody
+        }
+        source {
+            formRegion: @compuesto
+            column: ID
+            dataType: number
+            primaryKey: true
+        }
+        security {
+            sessionStateProtection: checksumRequiredSessionLevel
+        }
+    )
+
+    pageItem P1701_ID_EMPRESA (
+        type: hidden
+        layout {
+            sequence: 20
+            region: @compuesto
+            slot: regionBody
+        }
+        source {
+            formRegion: @compuesto
+            column: ID_EMPRESA
+            dataType: number
+        }
+        default {
+            type: expression
+            plsqlExpression: :P0_ID_EMPRESA
+        }
+        security {
+            sessionStateProtection: checksumRequiredSessionLevel
+        }
+    )
+
+    pageItem P1701_ID_PRODUCTO (
+        type: popupLov
+        label {
+            label: Artículo genérico
+        }
+        settings {
+            displayAs: modalDialog
+        }
+        lov {
+            type: sharedComponent
+            lov: @lv-articulos-descripcion
+        }
+        layout {
+            sequence: 30
+            region: @compuesto
+            slot: regionBody
+            columnSpan: 6
+        }
+        appearance {
+            template: @required
+            templateOptions: #DEFAULT#
+        }
+        validation {
+            valueRequired: true
+        }
+        source {
+            formRegion: @compuesto
+            column: ID_PRODUCTO
+            dataType: number
+        }
+    )
+
+    pageItem P1701_ESTADO (
+        type: selectList
+        label {
+            label: Estado
+        }
+        lov {
+            type: staticValues
+            staticValues: STATIC:Activo;A,Inactivo;I
+            displayNullValue: false
+        }
+        layout {
+            sequence: 40
+            region: @compuesto
+            slot: regionBody
+            startNewRow: false
+            columnSpan: 3
+        }
+        appearance {
+            template: @optional
+            templateOptions: #DEFAULT#
+        }
+        source {
+            formRegion: @compuesto
+            column: ESTADO
+            dataType: varchar2
+        }
+        default {
+            type: static
+            staticValue: A
+        }
+    )
+
+    pageItem P1701_COSTO_GUIA_PROD (
+        type: numberField
+        label {
+            label: Costo guía (unidad base)
+        }
+        layout {
+            sequence: 50
+            region: @compuesto
+            slot: regionBody
+            startNewRow: false
+            columnSpan: 3
+        }
+        appearance {
+            template: @optional
+            templateOptions: #DEFAULT#
+        }
+        source {
+            formRegion: @compuesto
+            column: COSTO_GUIA_PROD
+            dataType: number
+        }
+    )
+
+    pageItem P1701_OBSERVACION (
+        type: textarea
+        label {
+            label: Observación
+        }
+        layout {
+            sequence: 60
+            region: @compuesto
+            slot: regionBody
+        }
+        appearance {
+            template: @optional
+            templateOptions: #DEFAULT#
+        }
+        source {
+            formRegion: @compuesto
+            column: OBSERVACION
+            dataType: varchar2
+        }
+    )
+
+    pageItem P1701_CONTROL (
+        type: displayOnly
+        label {
+            label: Control de configuración
+        }
+        layout {
+            sequence: 70
+            region: @compuesto
+            slot: regionBody
+        }
+        appearance {
+            template: @optional
+            templateOptions: #DEFAULT#
+        }
+        source {
+            type: expression
+            plsqlExpression: nvl(prwk_produccion.errores_compuesto(:P1701_ID), 'Sin observaciones')
+            used: always
+        }
+        serverSideCondition {
+            type: itemIsNotNull
+            item: P1701_ID
+        }
+    )
+
+    button cancel (
+        buttonName: CANCEL
+        label: Cancelar
+        layout {
+            sequence: 10
+            region: @buttons
+            slot: close
+        }
+        appearance {
+            buttonTemplate: @text
+            templateOptions: #DEFAULT#
+        }
+        behavior {
+            action: triggerAction
+        }
+
+        triggerAction native-dialog-cancel (
+            action: cancelDialog
+            execution {
+                sequence: 10
+            }
+        )
+
+    )
+
+    button delete (
+        buttonName: DELETE
+        label: Borrar
+        layout {
+            sequence: 20
+            region: @buttons
+            slot: delete
+        }
+        appearance {
+            buttonTemplate: @text
+            templateOptions: #DEFAULT#
+            cssClasses: t-Button--danger
+        }
+        behavior {
+            executeValidations: false
+            warnOnUnsavedChanges: doNotCheck
+            databaseAction: delete
+            requiresConfirmation: true
+        }
+        confirmation {
+            message: &APP_TEXT$DELETE_MSG!RAW.
+            style: danger
+        }
+        serverSideCondition {
+            type: itemIsNotNull
+            item: P1701_ID
+        }
+        security {
+            authorizationScheme: @derechos-borrar-2
+        }
+    )
+
+    button save (
+        buttonName: SAVE
+        label: Guardar
+        layout {
+            sequence: 30
+            region: @buttons
+            slot: next
+        }
+        appearance {
+            buttonTemplate: @text-with-icon
+            hot: true
+            templateOptions: [
+                #DEFAULT#
+                t-Button--iconLeft
+            ]
+            icon: fa-save
+        }
+        behavior {
+            warnOnUnsavedChanges: doNotCheck
+            databaseAction: update
+        }
+        serverSideCondition {
+            type: itemIsNotNull
+            item: P1701_ID
+        }
+        security {
+            authorizationScheme: @derechos-actualizar-2
+        }
+    )
+
+    button create (
+        buttonName: CREATE
+        label: Crear
+        layout {
+            sequence: 40
+            region: @buttons
+            slot: next
+        }
+        appearance {
+            buttonTemplate: @text-with-icon
+            hot: true
+            templateOptions: [
+                #DEFAULT#
+                t-Button--iconLeft
+            ]
+            icon: fa-plus
+        }
+        behavior {
+            warnOnUnsavedChanges: doNotCheck
+            databaseAction: insert
+        }
+        serverSideCondition {
+            type: itemIsNull
+            item: P1701_ID
+        }
+        security {
+            authorizationScheme: @derechos-insertar-2
+        }
+    )
+
+    validation generico-no-es-marca (
+        name: El genérico no es marca
+        execution {
+            sequence: 10
+        }
+        validation {
+            type: functionBody
+            plsqlFunctionBody:
+                ```plsql
+                begin
+                   if prwk_produccion.es_marca(:P0_ID_EMPRESA, :P1701_ID_PRODUCTO) = 'S' then
+                      return 'El artículo ya es marca de otro compuesto: un genérico no puede ser a la vez marca.';
+                   end if;
+                   return null;
+                end;
+                ```
+        }
+        error {
+            displayLocation: inlineWithFieldAndInNotification
+            associatedItem: @P1701_ID_PRODUCTO
+        }
+        serverSideCondition {
+            type: requestIsContainedInValue
+            value: CREATE,SAVE
+        }
+    )
+
+    validation marca-valida (
+        name: Marca válida
+        execution {
+            sequence: 20
+        }
+        validation {
+            editableRegion: @marcas
+            type: functionBody
+            plsqlFunctionBody:
+                ```plsql
+                declare
+                   l_cuenta pls_integer;
+                begin
+                   if :ID_PRODUCTO = :P1701_ID_PRODUCTO then
+                      return 'La marca no puede ser el mismo artículo genérico.';
+                   end if;
+                   if nvl(:FACTOR_UB, 0) <= 0 then
+                      return 'Indique cuántas unidades del genérico equivale una unidad de la marca (por ejemplo, 25 para una bolsa de 25 kg).';
+                   end if;
+                   select count(*)
+                     into l_cuenta
+                     from prw_compuestos_cabecera c
+                    where c.id_empresa = :P0_ID_EMPRESA
+                      and c.id_producto = :ID_PRODUCTO;
+                   if l_cuenta > 0 then
+                      return 'La marca es genérico de otro compuesto: la relación sería circular.';
+                   end if;
+                   select count(*)
+                     into l_cuenta
+                     from prw_compuestos_detalle d
+                    where d.id_empresa = :P0_ID_EMPRESA
+                      and d.id_producto = :ID_PRODUCTO
+                      and d.id_compuesto != nvl(:P1701_ID, -1);
+                   if l_cuenta > 0 then
+                      return 'La marca ya pertenece a otro compuesto: cada marca tiene un único destino de producción.';
+                   end if;
+                   return null;
+                end;
+                ```
+        }
+        error {
+            displayLocation: inlineWithFieldAndInNotification
+            associatedColumn: ID_PRODUCTO
+        }
+        serverSideCondition {
+            type: requestIsContainedInValue
+            value: CREATE,SAVE
+        }
+    )
+
+    process initialize-form (
+        name: Inicializar formulario
+        type: formInitialization
+        formRegion: @compuesto
+        execution {
+            sequence: 10
+            point: beforeHeader
+        }
+    )
+
+    process process-form (
+        name: Guardar genérico
+        type: formAutoRowProcessing
+        formRegion: @compuesto
+        execution {
+            sequence: 10
+        }
+        error {
+            errorMessage: No se pudo guardar el compuesto: #SQLERRM_TEXT#
+        }
+    )
+
+    process setear-id-marcas (
+        name: Asignar compuesto a las marcas
+        type: executeCode
+        editableRegion: @marcas
+        source {
+            plsqlCode: :ID_COMPUESTO := :P1701_ID;
+        }
+        execution {
+            sequence: 20
+        }
+        serverSideCondition {
+            type: request!=Value
+            value: DELETE
+        }
+    )
+
+    process guardar-marcas (
+        name: Guardar marcas
+        type: interactiveGridAutoRowProcessing
+        editableRegion: @marcas
+        execution {
+            sequence: 30
+        }
+        serverSideCondition {
+            type: request!=Value
+            value: DELETE
+        }
+    )
+
+    process setear-id-sucursales (
+        name: Asignar compuesto a las sucursales
+        type: executeCode
+        editableRegion: @sucursales
+        source {
+            plsqlCode: :ID_COMPUESTO := :P1701_ID;
+        }
+        execution {
+            sequence: 40
+        }
+        serverSideCondition {
+            type: request!=Value
+            value: DELETE
+        }
+    )
+
+    process guardar-sucursales (
+        name: Guardar sucursales
+        type: interactiveGridAutoRowProcessing
+        editableRegion: @sucursales
+        execution {
+            sequence: 50
+        }
+        serverSideCondition {
+            type: request!=Value
+            value: DELETE
+        }
+    )
+
+    process close-dialog (
+        name: Cerrar diálogo
+        type: closeDialog
+        execution {
+            sequence: 60
+        }
+        serverSideCondition {
+            type: requestIsContainedInValue
+            value: CREATE,SAVE,DELETE
+        }
+    )
+
+)

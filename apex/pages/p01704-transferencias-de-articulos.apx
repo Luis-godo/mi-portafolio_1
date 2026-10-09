@@ -1,0 +1,356 @@
+page 1704 (
+    name: Transferencias de Artículos
+    alias: TRANSFERENCIAS-DE-ARTICULOS
+    title: Transferencias de Artículos
+    appearance {
+        pageTemplate: @standard
+        templateOptions: #DEFAULT#
+    }
+    navigation {
+        cursorFocus: doNotFocusCursor
+    }
+    security {
+        authorizationScheme: @derecho-pagina-2
+        pageAccessProtection: argumentsMustHaveChecksum
+        formAutoComplete: false
+    }
+
+    region filtros (
+        name: Filtros
+        type: staticContent
+        layout {
+            sequence: 10
+            slot: body
+        }
+        appearance {
+            template: @standard
+            templateOptions: [
+                #DEFAULT#
+                t-Region--scrollBody
+            ]
+        }
+    )
+
+    region transferencias (
+        name: Transferencias de artículos
+        type: classicReport
+        source {
+            location: localDatabase
+            type: sqlQuery
+            sqlQuery:
+                ```sql
+                select c.id,
+                       c.ser_comprobante || '-' || c.nro_comprobante numero,
+                       c.fec_comprobante,
+                       s.descripcion sucursal,
+                       se.descripcion sucursal_ent,
+                       decode(c.estado, 'P', 'Pendiente', 'C', 'Confirmada', 'A', 'Anulada') estado,
+                       (select sum(d.costo_total)
+                          from prw_transferencia_det d
+                         where d.id_transferencia = c.id) costo_total,
+                       (select listagg(a.descripcion, ', ') within group (order by d.nro_orden)
+                          from prw_transferencia_det d
+                          join stw_articulos a on a.id = d.id_articulo
+                         where d.id_transferencia = c.id) articulos,
+                       c.motivo,
+                       c.cod_usu_alta usuario
+                  from prw_transferencia_cab c
+                  join bsw_sucursales s on s.id = c.id_sucursal
+                  join bsw_sucursales se on se.id = c.id_sucursal_ent
+                 where c.id_empresa = :P0_ID_EMPRESA
+                   and (:P1704_ESTADO is null or c.estado = :P1704_ESTADO)
+                   and c.fec_comprobante >= nvl(to_date(:P1704_DESDE), trunc(sysdate) - 30)
+                 order by c.fec_comprobante desc, c.nro_comprobante desc
+                ```
+            pageItemsToSubmit: [
+                P1704_ESTADO
+                P1704_DESDE
+            ]
+        }
+        layout {
+            sequence: 20
+            slot: body
+        }
+        appearance {
+            template: @standard
+            templateOptions: [
+                #DEFAULT#
+                t-Region--scrollBody
+            ]
+        }
+        security {
+            authorizationScheme: @derechos-consultar
+        }
+        reportLayout {
+            numberOfRows: 50
+        }
+        componentAppearance {
+            template: @standard
+            templateOptions: [
+                #DEFAULT#
+                t-Report--stretch
+                t-Report--rowHighlight
+            ]
+        }
+        pagination {
+            type: rowRangesXToYOfZWithPagination
+            displayPosition: bottomRight
+        }
+        messages {
+            whenNoDataFound: No hay transferencias para los filtros indicados.
+        }
+
+        column ID (
+            reportColumnQueryId: 1
+            derivedColumn: N
+            type: hidden
+            layout {
+                sequence: 10
+            }
+        )
+
+        column NUMERO (
+            reportColumnQueryId: 2
+            derivedColumn: N
+            type: link
+            heading {
+                heading: Número
+            }
+            layout {
+                sequence: 20
+            }
+            link {
+                target: {
+                    page: 1705
+                    clearCache: 1705
+                    items: {
+                        P1705_ID: #ID#
+                    }
+                }
+                linkText: #NUMERO#
+            }
+        )
+
+        column FEC_COMPROBANTE (
+            reportColumnQueryId: 3
+            derivedColumn: N
+            heading {
+                heading: Fecha
+            }
+            layout {
+                sequence: 30
+            }
+        )
+
+        column SUCURSAL (
+            reportColumnQueryId: 4
+            derivedColumn: N
+            heading {
+                heading: Sale de
+            }
+            layout {
+                sequence: 40
+            }
+        )
+
+        column SUCURSAL_ENT (
+            reportColumnQueryId: 5
+            derivedColumn: N
+            heading {
+                heading: Entra en
+            }
+            layout {
+                sequence: 50
+            }
+        )
+
+        column ESTADO (
+            reportColumnQueryId: 6
+            derivedColumn: N
+            heading {
+                heading: Estado
+            }
+            layout {
+                sequence: 60
+            }
+        )
+
+        column COSTO_TOTAL (
+            reportColumnQueryId: 7
+            derivedColumn: N
+            heading {
+                heading: Costo
+                alignment: end
+            }
+            layout {
+                sequence: 70
+                columnAlignment: end
+            }
+            appearance {
+                formatMask: 999G999G999G990
+            }
+        )
+
+        column ARTICULOS (
+            reportColumnQueryId: 8
+            derivedColumn: N
+            heading {
+                heading: Artículos
+            }
+            layout {
+                sequence: 80
+            }
+        )
+
+        column MOTIVO (
+            reportColumnQueryId: 9
+            derivedColumn: N
+            heading {
+                heading: Motivo
+            }
+            layout {
+                sequence: 90
+            }
+        )
+
+        column USUARIO (
+            reportColumnQueryId: 10
+            derivedColumn: N
+            heading {
+                heading: Usuario
+            }
+            layout {
+                sequence: 100
+            }
+        )
+    )
+
+    pageItem P1704_ESTADO (
+        type: selectList
+        label {
+            label: Estado
+        }
+        lov {
+            type: staticValues
+            staticValues: STATIC:Pendientes;P,Confirmadas;C,Anuladas;A
+            displayNullValue: true
+            nullDisplayValue: Todas
+        }
+        layout {
+            sequence: 10
+            region: @filtros
+            slot: regionBody
+            columnSpan: 3
+        }
+        appearance {
+            template: @optional
+            templateOptions: #DEFAULT#
+        }
+    )
+
+    pageItem P1704_DESDE (
+        type: datePicker
+        label {
+            label: Desde
+        }
+        layout {
+            sequence: 20
+            region: @filtros
+            slot: regionBody
+            startNewRow: false
+            columnSpan: 3
+        }
+        appearance {
+            template: @optional
+            templateOptions: #DEFAULT#
+        }
+        default {
+            type: expression
+            plsqlExpression: trunc(sysdate) - 30
+        }
+    )
+
+    button create (
+        buttonName: CREATE
+        label: Nueva transferencia
+        layout {
+            sequence: 10
+            region: @transferencias
+            slot: create
+        }
+        appearance {
+            buttonTemplate: @text-with-icon
+            hot: true
+            templateOptions: [
+                #DEFAULT#
+                t-Button--iconLeft
+            ]
+            icon: fa-plus
+        }
+        behavior {
+            action: redirectThisApp
+            target: {
+                page: 1705
+                clearCache: 1705
+            }
+            warnOnUnsavedChanges: doNotCheck
+        }
+        security {
+            authorizationScheme: @derechos-insertar-2
+        }
+    )
+
+    dynamicAction filtrar (
+        name: Filtrar
+        execution {
+            sequence: 10
+        }
+        when {
+            event: change
+            selectionType: items
+            items: [
+                P1704_ESTADO
+                P1704_DESDE
+            ]
+        }
+
+        action native-refresh (
+            action: refresh
+            affectedElements {
+                selectionType: region
+                region: @transferencias
+            }
+            execution {
+                sequence: 10
+                fireOnInit: false
+            }
+        )
+
+    )
+
+    dynamicAction dialogo-cerrado (
+        name: Diálogo cerrado
+        execution {
+            sequence: 20
+        }
+        when {
+            event: apexafterclosedialog
+            selectionType: region
+            region: @transferencias
+        }
+
+        action native-refresh (
+            action: refresh
+            affectedElements {
+                selectionType: region
+                region: @transferencias
+            }
+            execution {
+                sequence: 10
+                fireOnInit: false
+            }
+        )
+
+    )
+
+)

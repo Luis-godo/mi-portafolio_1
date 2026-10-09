@@ -1,0 +1,222 @@
+page 1700 (
+    name: Artículos Compuestos
+    alias: ARTICULOS-COMPUESTOS
+    title: Artículos Compuestos
+    appearance {
+        pageTemplate: @standard
+        templateOptions: #DEFAULT#
+    }
+    navigation {
+        cursorFocus: doNotFocusCursor
+    }
+    security {
+        authorizationScheme: @derecho-pagina-2
+        pageAccessProtection: argumentsMustHaveChecksum
+        formAutoComplete: false
+    }
+
+    region compuestos (
+        name: Artículos Compuestos
+        type: classicReport
+        source {
+            location: localDatabase
+            type: sqlQuery
+            sqlQuery:
+                ```sql
+                select c.id,
+                       a.cod_articulo,
+                       a.descripcion generico,
+                       (select count(*)
+                          from prw_compuestos_detalle d
+                         where d.id_compuesto = c.id
+                           and d.estado = 'A') marcas,
+                       (select listagg(s.descripcion, ', ') within group (order by s.descripcion)
+                          from prw_compuestos_sucursales cs
+                          join bsw_sucursales s on s.id = cs.id_sucursal
+                         where cs.id_compuesto = c.id) sucursales,
+                       decode(c.estado, 'A', 'Activo', 'Inactivo') estado,
+                       nvl(prwk_produccion.errores_compuesto(c.id), 'OK') control
+                  from prw_compuestos_cabecera c
+                  join stw_articulos a on a.id = c.id_producto
+                 where c.id_empresa = :P0_ID_EMPRESA
+                 order by a.descripcion
+                ```
+        }
+        layout {
+            sequence: 10
+            slot: body
+        }
+        appearance {
+            template: @standard
+            templateOptions: [
+                #DEFAULT#
+                t-Region--scrollBody
+            ]
+        }
+        security {
+            authorizationScheme: @derechos-consultar
+        }
+        reportLayout {
+            numberOfRows: 50
+        }
+        componentAppearance {
+            template: @standard
+            templateOptions: [
+                #DEFAULT#
+                t-Report--stretch
+                t-Report--rowHighlight
+            ]
+        }
+        pagination {
+            type: rowRangesXToYOfZWithPagination
+            displayPosition: bottomRight
+        }
+        messages {
+            whenNoDataFound: No hay artículos compuestos cargados.
+        }
+
+        column ID (
+            reportColumnQueryId: 1
+            derivedColumn: N
+            type: hidden
+            layout {
+                sequence: 10
+            }
+        )
+
+        column COD_ARTICULO (
+            reportColumnQueryId: 2
+            derivedColumn: N
+            type: link
+            heading {
+                heading: Código
+            }
+            layout {
+                sequence: 20
+            }
+            link {
+                target: {
+                    page: 1701
+                    clearCache: 1701
+                    items: {
+                        P1701_ID: #ID#
+                    }
+                }
+                linkText: #COD_ARTICULO#
+            }
+        )
+
+        column GENERICO (
+            reportColumnQueryId: 3
+            derivedColumn: N
+            heading {
+                heading: Artículo genérico
+            }
+            layout {
+                sequence: 30
+            }
+        )
+
+        column MARCAS (
+            reportColumnQueryId: 4
+            derivedColumn: N
+            heading {
+                heading: Marcas activas
+                alignment: end
+            }
+            layout {
+                sequence: 40
+                columnAlignment: end
+            }
+        )
+
+        column SUCURSALES (
+            reportColumnQueryId: 5
+            derivedColumn: N
+            heading {
+                heading: Sucursales habilitadas
+            }
+            layout {
+                sequence: 50
+            }
+        )
+
+        column ESTADO (
+            reportColumnQueryId: 6
+            derivedColumn: N
+            heading {
+                heading: Estado
+            }
+            layout {
+                sequence: 60
+            }
+        )
+
+        column CONTROL (
+            reportColumnQueryId: 7
+            derivedColumn: N
+            heading {
+                heading: Control
+            }
+            layout {
+                sequence: 70
+            }
+        )
+    )
+
+    button create (
+        buttonName: CREATE
+        label: Nuevo compuesto
+        layout {
+            sequence: 10
+            region: @compuestos
+            slot: create
+        }
+        appearance {
+            buttonTemplate: @text-with-icon
+            hot: true
+            templateOptions: [
+                #DEFAULT#
+                t-Button--iconLeft
+            ]
+            icon: fa-plus
+        }
+        behavior {
+            action: redirectThisApp
+            target: {
+                page: 1701
+                clearCache: 1701
+            }
+            warnOnUnsavedChanges: doNotCheck
+        }
+        security {
+            authorizationScheme: @derechos-insertar-2
+        }
+    )
+
+    dynamicAction dialogo-cerrado (
+        name: Diálogo cerrado
+        execution {
+            sequence: 10
+        }
+        when {
+            event: apexafterclosedialog
+            selectionType: region
+            region: @compuestos
+        }
+
+        action native-refresh (
+            action: refresh
+            affectedElements {
+                selectionType: region
+                region: @compuestos
+            }
+            execution {
+                sequence: 10
+                fireOnInit: false
+            }
+        )
+
+    )
+
+)

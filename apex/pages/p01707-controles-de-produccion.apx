@@ -1,0 +1,1178 @@
+page 1707 (
+    name: Controles de Producción
+    alias: CONTROLES-DE-PRODUCCION
+    title: Controles de Producción
+    appearance {
+        pageTemplate: @standard
+        templateOptions: #DEFAULT#
+    }
+    navigation {
+        cursorFocus: doNotFocusCursor
+    }
+    security {
+        authorizationScheme: @derecho-pagina-2
+        pageAccessProtection: argumentsMustHaveChecksum
+        formAutoComplete: false
+    }
+
+    region filtros (
+        name: Filtros
+        type: staticContent
+        layout {
+            sequence: 10
+            slot: body
+        }
+        appearance {
+            template: @standard
+            templateOptions: [
+                #DEFAULT#
+                t-Region--scrollBody
+            ]
+        }
+    )
+
+    region rendimiento (
+        name: Rendimiento: planificado contra real
+        type: classicReport
+        source {
+            location: localDatabase
+            type: sqlQuery
+            sqlQuery:
+                ```sql
+                select r.ser_produccion || '-' || r.nro_produccion orden,
+                       r.fec_produccion,
+                       decode(r.estado, 'P', 'Pendiente', 'C', 'Confirmada', 'A', 'Anulada') estado,
+                       r.cod_formula,
+                       r.descripcion articulo,
+                       r.cantidad_teorica,
+                       r.cantidad_real,
+                       r.desvio,
+                       r.desvio_porc,
+                       r.tolerancia_porc,
+                       decode(r.fuera_tolerancia, 'S', 'Fuera de tolerancia', 'OK') control,
+                       r.motivo_desvio
+                  from prwv_rendimiento_produccion r
+                 where r.id_empresa = :P0_ID_EMPRESA
+                   and r.fec_produccion between nvl(to_date(:P1707_DESDE), trunc(sysdate) - 30) and nvl(to_date(:P1707_HASTA), trunc(sysdate))
+                   and (:P1707_SOLO_PROBLEMAS = 'N' or r.fuera_tolerancia = 'S')
+                 order by r.fec_produccion desc, r.nro_produccion desc
+                ```
+            pageItemsToSubmit: [
+                P1707_DESDE
+                P1707_HASTA
+                P1707_SOLO_PROBLEMAS
+            ]
+        }
+        layout {
+            sequence: 20
+            slot: body
+        }
+        appearance {
+            template: @standard
+            templateOptions: [
+                #DEFAULT#
+                t-Region--scrollBody
+            ]
+        }
+        security {
+            authorizationScheme: @derechos-consultar
+        }
+        reportLayout {
+            numberOfRows: 15
+        }
+        componentAppearance {
+            template: @standard
+            templateOptions: [
+                #DEFAULT#
+                t-Report--stretch
+                t-Report--rowHighlight
+            ]
+        }
+        pagination {
+            type: rowRangesXToYOfZWithPagination
+            displayPosition: bottomRight
+        }
+        messages {
+            whenNoDataFound: Sin producciones en el período.
+        }
+
+        column ORDEN (
+            reportColumnQueryId: 1
+            derivedColumn: N
+            heading {
+                heading: Orden
+            }
+            layout {
+                sequence: 10
+            }
+        )
+
+        column FEC_PRODUCCION (
+            reportColumnQueryId: 2
+            derivedColumn: N
+            heading {
+                heading: Fecha
+            }
+            layout {
+                sequence: 20
+            }
+        )
+
+        column ESTADO (
+            reportColumnQueryId: 3
+            derivedColumn: N
+            heading {
+                heading: Estado
+            }
+            layout {
+                sequence: 30
+            }
+        )
+
+        column COD_FORMULA (
+            reportColumnQueryId: 4
+            derivedColumn: N
+            heading {
+                heading: Fórmula
+            }
+            layout {
+                sequence: 40
+            }
+        )
+
+        column ARTICULO (
+            reportColumnQueryId: 5
+            derivedColumn: N
+            heading {
+                heading: Artículo
+            }
+            layout {
+                sequence: 50
+            }
+        )
+
+        column CANTIDAD_TEORICA (
+            reportColumnQueryId: 6
+            derivedColumn: N
+            heading {
+                heading: Planificado
+                alignment: end
+            }
+            layout {
+                sequence: 60
+                columnAlignment: end
+            }
+            appearance {
+                formatMask: 999G999G999G990D00
+            }
+        )
+
+        column CANTIDAD_REAL (
+            reportColumnQueryId: 7
+            derivedColumn: N
+            heading {
+                heading: Real
+                alignment: end
+            }
+            layout {
+                sequence: 70
+                columnAlignment: end
+            }
+            appearance {
+                formatMask: 999G999G999G990D00
+            }
+        )
+
+        column DESVIO (
+            reportColumnQueryId: 8
+            derivedColumn: N
+            heading {
+                heading: Desvío
+                alignment: end
+            }
+            layout {
+                sequence: 80
+                columnAlignment: end
+            }
+            appearance {
+                formatMask: 999G999G999G990D00
+            }
+        )
+
+        column DESVIO_PORC (
+            reportColumnQueryId: 9
+            derivedColumn: N
+            heading {
+                heading: Desvío %
+                alignment: end
+            }
+            layout {
+                sequence: 90
+                columnAlignment: end
+            }
+            appearance {
+                formatMask: 999G999G999G990D00
+            }
+        )
+
+        column TOLERANCIA_PORC (
+            reportColumnQueryId: 10
+            derivedColumn: N
+            heading {
+                heading: Tolerancia %
+                alignment: end
+            }
+            layout {
+                sequence: 100
+                columnAlignment: end
+            }
+            appearance {
+                formatMask: 999G999G999G990D00
+            }
+        )
+
+        column CONTROL (
+            reportColumnQueryId: 11
+            derivedColumn: N
+            heading {
+                heading: Control
+            }
+            layout {
+                sequence: 110
+            }
+        )
+
+        column MOTIVO_DESVIO (
+            reportColumnQueryId: 12
+            derivedColumn: N
+            heading {
+                heading: Motivo del desvío
+            }
+            layout {
+                sequence: 120
+            }
+        )
+    )
+
+    region costos (
+        name: Costo de producción frente a la producción anterior
+        type: classicReport
+        source {
+            location: localDatabase
+            type: sqlQuery
+            sqlQuery:
+                ```sql
+                select c.ser_produccion || '-' || c.nro_produccion orden,
+                       c.fec_produccion,
+                       c.descripcion articulo,
+                       c.costo_unitario,
+                       c.costo_unitario_anterior,
+                       c.variacion_porc
+                  from prwv_costos_produccion c
+                 where c.id_empresa = :P0_ID_EMPRESA
+                   and c.fec_produccion between nvl(to_date(:P1707_DESDE), trunc(sysdate) - 30) and nvl(to_date(:P1707_HASTA), trunc(sysdate))
+                   and (:P1707_SOLO_PROBLEMAS = 'N' or abs(c.variacion_porc) > nvl(to_number(w_busca_parametro('PD', 'PRW_TOLERANCIA_PORC')), 5))
+                 order by abs(nvl(c.variacion_porc, 0)) desc
+                ```
+            pageItemsToSubmit: [
+                P1707_DESDE
+                P1707_HASTA
+                P1707_SOLO_PROBLEMAS
+            ]
+        }
+        layout {
+            sequence: 30
+            slot: body
+        }
+        appearance {
+            template: @standard
+            templateOptions: [
+                #DEFAULT#
+                t-Region--scrollBody
+            ]
+        }
+        security {
+            authorizationScheme: @derechos-consultar
+        }
+        reportLayout {
+            numberOfRows: 15
+        }
+        componentAppearance {
+            template: @standard
+            templateOptions: [
+                #DEFAULT#
+                t-Report--stretch
+                t-Report--rowHighlight
+            ]
+        }
+        pagination {
+            type: rowRangesXToYOfZWithPagination
+            displayPosition: bottomRight
+        }
+        messages {
+            whenNoDataFound: Sin producciones confirmadas en el período.
+        }
+
+        column ORDEN (
+            reportColumnQueryId: 1
+            derivedColumn: N
+            heading {
+                heading: Orden
+            }
+            layout {
+                sequence: 10
+            }
+        )
+
+        column FEC_PRODUCCION (
+            reportColumnQueryId: 2
+            derivedColumn: N
+            heading {
+                heading: Fecha
+            }
+            layout {
+                sequence: 20
+            }
+        )
+
+        column ARTICULO (
+            reportColumnQueryId: 3
+            derivedColumn: N
+            heading {
+                heading: Artículo
+            }
+            layout {
+                sequence: 30
+            }
+        )
+
+        column COSTO_UNITARIO (
+            reportColumnQueryId: 4
+            derivedColumn: N
+            heading {
+                heading: Costo unit.
+                alignment: end
+            }
+            layout {
+                sequence: 40
+                columnAlignment: end
+            }
+            appearance {
+                formatMask: 999G999G999G990D00
+            }
+        )
+
+        column COSTO_UNITARIO_ANTERIOR (
+            reportColumnQueryId: 5
+            derivedColumn: N
+            heading {
+                heading: Costo unit. anterior
+                alignment: end
+            }
+            layout {
+                sequence: 50
+                columnAlignment: end
+            }
+            appearance {
+                formatMask: 999G999G999G990D00
+            }
+        )
+
+        column VARIACION_PORC (
+            reportColumnQueryId: 6
+            derivedColumn: N
+            heading {
+                heading: Variación %
+                alignment: end
+            }
+            layout {
+                sequence: 60
+                columnAlignment: end
+            }
+            appearance {
+                formatMask: 999G999G999G990D00
+            }
+        )
+    )
+
+    region compras-pendientes (
+        name: Compras con marcas de producción pendientes de conversión
+        type: classicReport
+        source {
+            location: localDatabase
+            type: sqlQuery
+            sqlQuery:
+                ```sql
+                select v.tip_comprobante || ' ' || v.ser_comprobante || '-' || v.nro_comprobante compra,
+                       v.fec_comprobante,
+                       v.descripcion marca,
+                       v.cantidad_ub,
+                       v.cantidad_generico,
+                       g.descripcion generico
+                  from prwv_compras_pend_conversion v
+                  join stw_articulos g on g.id = v.id_generico
+                 where v.id_empresa = :P0_ID_EMPRESA
+                 order by v.fec_comprobante
+                ```
+        }
+        layout {
+            sequence: 40
+            slot: body
+        }
+        appearance {
+            template: @standard
+            templateOptions: [
+                #DEFAULT#
+                t-Region--scrollBody
+            ]
+        }
+        security {
+            authorizationScheme: @derechos-consultar
+        }
+        reportLayout {
+            numberOfRows: 15
+        }
+        componentAppearance {
+            template: @standard
+            templateOptions: [
+                #DEFAULT#
+                t-Report--stretch
+                t-Report--rowHighlight
+            ]
+        }
+        pagination {
+            type: rowRangesXToYOfZWithPagination
+            displayPosition: bottomRight
+        }
+        messages {
+            whenNoDataFound: No hay compras pendientes de conversión.
+        }
+
+        column COMPRA (
+            reportColumnQueryId: 1
+            derivedColumn: N
+            heading {
+                heading: Compra
+            }
+            layout {
+                sequence: 10
+            }
+        )
+
+        column FEC_COMPROBANTE (
+            reportColumnQueryId: 2
+            derivedColumn: N
+            heading {
+                heading: Fecha
+            }
+            layout {
+                sequence: 20
+            }
+        )
+
+        column MARCA (
+            reportColumnQueryId: 3
+            derivedColumn: N
+            heading {
+                heading: Marca comprada
+            }
+            layout {
+                sequence: 30
+            }
+        )
+
+        column CANTIDAD_UB (
+            reportColumnQueryId: 4
+            derivedColumn: N
+            heading {
+                heading: Cantidad (UB marca)
+                alignment: end
+            }
+            layout {
+                sequence: 40
+                columnAlignment: end
+            }
+            appearance {
+                formatMask: 999G999G999G990D00
+            }
+        )
+
+        column CANTIDAD_GENERICO (
+            reportColumnQueryId: 5
+            derivedColumn: N
+            heading {
+                heading: Equivale en genérico
+                alignment: end
+            }
+            layout {
+                sequence: 50
+                columnAlignment: end
+            }
+            appearance {
+                formatMask: 999G999G999G990D00
+            }
+        )
+
+        column GENERICO (
+            reportColumnQueryId: 6
+            derivedColumn: N
+            heading {
+                heading: Genérico
+            }
+            layout {
+                sequence: 60
+            }
+        )
+    )
+
+    region oc-errores (
+        name: Órdenes de compra que no respetan las reglas de producción (últimos 180 días)
+        type: classicReport
+        source {
+            location: localDatabase
+            type: sqlQuery
+            sqlQuery:
+                ```sql
+                select o.tip_comprobante || ' ' || o.ser_comprobante || '-' || o.nro_comprobante orden,
+                       o.fec_comprobante,
+                       decode(o.ind_produccion, 'S', 'Sí', 'No') produccion,
+                       replace(o.errores, chr(10), '<br>') errores
+                  from prwv_oc_produccion_errores o
+                 where o.id_empresa = :P0_ID_EMPRESA
+                 order by o.fec_comprobante desc
+                ```
+        }
+        layout {
+            sequence: 50
+            slot: body
+        }
+        appearance {
+            template: @standard
+            templateOptions: [
+                #DEFAULT#
+                t-Region--scrollBody
+            ]
+        }
+        security {
+            authorizationScheme: @derechos-consultar
+        }
+        reportLayout {
+            numberOfRows: 15
+        }
+        componentAppearance {
+            template: @standard
+            templateOptions: [
+                #DEFAULT#
+                t-Report--stretch
+                t-Report--rowHighlight
+            ]
+        }
+        pagination {
+            type: rowRangesXToYOfZWithPagination
+            displayPosition: bottomRight
+        }
+        messages {
+            whenNoDataFound: Todas las órdenes respetan las reglas de producción.
+        }
+
+        column ORDEN (
+            reportColumnQueryId: 1
+            derivedColumn: N
+            heading {
+                heading: Orden de compra
+            }
+            layout {
+                sequence: 10
+            }
+        )
+
+        column FEC_COMPROBANTE (
+            reportColumnQueryId: 2
+            derivedColumn: N
+            heading {
+                heading: Fecha
+            }
+            layout {
+                sequence: 20
+            }
+        )
+
+        column PRODUCCION (
+            reportColumnQueryId: 3
+            derivedColumn: N
+            heading {
+                heading: Marcada producción
+            }
+            layout {
+                sequence: 30
+            }
+        )
+
+        column ERRORES (
+            reportColumnQueryId: 4
+            derivedColumn: N
+            heading {
+                heading: Problemas
+            }
+            layout {
+                sequence: 40
+            }
+            security {
+                escapeSpecialChars: false
+            }
+        )
+    )
+
+    region config (
+        name: Configuración incompleta
+        type: classicReport
+        source {
+            location: localDatabase
+            type: sqlQuery
+            sqlQuery:
+                ```sql
+                select 'Fórmula ' || f.cod_formula || ' ' || f.comentario objeto,
+                       f.cod_articulo || ' - ' || f.descripcion articulo,
+                       f.problema
+                  from prwv_formulas_incompletas f
+                 where f.id_empresa = to_char(:P0_ID_EMPRESA)
+                union all
+                select 'Artículo de producción', s.cod_articulo || ' - ' || s.descripcion,
+                       'Marcado para producción y sin compuesto (no es genérico ni marca)'
+                  from prwv_art_produccion_sin_compuesto s
+                 where s.id_empresa = :P0_ID_EMPRESA
+                union all
+                select 'Compuesto', c.cod_articulo || ' - ' || c.descripcion, replace(c.errores, chr(10), '<br>')
+                  from prwv_compuestos_con_errores c
+                 where c.id_empresa = :P0_ID_EMPRESA
+                ```
+        }
+        layout {
+            sequence: 60
+            slot: body
+        }
+        appearance {
+            template: @standard
+            templateOptions: [
+                #DEFAULT#
+                t-Region--scrollBody
+            ]
+        }
+        security {
+            authorizationScheme: @derechos-consultar
+        }
+        reportLayout {
+            numberOfRows: 15
+        }
+        componentAppearance {
+            template: @standard
+            templateOptions: [
+                #DEFAULT#
+                t-Report--stretch
+                t-Report--rowHighlight
+            ]
+        }
+        pagination {
+            type: rowRangesXToYOfZWithPagination
+            displayPosition: bottomRight
+        }
+        messages {
+            whenNoDataFound: No hay problemas de configuración.
+        }
+
+        column OBJETO (
+            reportColumnQueryId: 1
+            derivedColumn: N
+            heading {
+                heading: Objeto
+            }
+            layout {
+                sequence: 10
+            }
+        )
+
+        column ARTICULO (
+            reportColumnQueryId: 2
+            derivedColumn: N
+            heading {
+                heading: Artículo
+            }
+            layout {
+                sequence: 20
+            }
+        )
+
+        column PROBLEMA (
+            reportColumnQueryId: 3
+            derivedColumn: N
+            heading {
+                heading: Problema
+            }
+            layout {
+                sequence: 30
+            }
+            security {
+                escapeSpecialChars: false
+            }
+        )
+    )
+
+    region inconsistencias (
+        name: Documentos con posibles inconsistencias de stock
+        type: classicReport
+        source {
+            location: localDatabase
+            type: sqlQuery
+            sqlQuery:
+                ```sql
+                select decode(i.tipo_documento, 'CNV', 'Conversión', 'TRF', 'Transferencia', 'PRO', 'Producción') documento,
+                       i.nro_documento,
+                       decode(i.estado, 'P', 'Pendiente', 'C', 'Confirmado', 'A', 'Anulado') estado,
+                       i.problema
+                  from prwv_documentos_inconsistentes i
+                 where i.id_empresa = :P0_ID_EMPRESA
+                ```
+        }
+        layout {
+            sequence: 70
+            slot: body
+        }
+        appearance {
+            template: @standard
+            templateOptions: [
+                #DEFAULT#
+                t-Region--scrollBody
+            ]
+        }
+        security {
+            authorizationScheme: @derechos-consultar
+        }
+        reportLayout {
+            numberOfRows: 15
+        }
+        componentAppearance {
+            template: @standard
+            templateOptions: [
+                #DEFAULT#
+                t-Report--stretch
+                t-Report--rowHighlight
+            ]
+        }
+        pagination {
+            type: rowRangesXToYOfZWithPagination
+            displayPosition: bottomRight
+        }
+        messages {
+            whenNoDataFound: Sin inconsistencias.
+        }
+
+        column DOCUMENTO (
+            reportColumnQueryId: 1
+            derivedColumn: N
+            heading {
+                heading: Documento
+            }
+            layout {
+                sequence: 10
+            }
+        )
+
+        column NRO_DOCUMENTO (
+            reportColumnQueryId: 2
+            derivedColumn: N
+            heading {
+                heading: Número
+            }
+            layout {
+                sequence: 20
+            }
+        )
+
+        column ESTADO (
+            reportColumnQueryId: 3
+            derivedColumn: N
+            heading {
+                heading: Estado
+            }
+            layout {
+                sequence: 30
+            }
+        )
+
+        column PROBLEMA (
+            reportColumnQueryId: 4
+            derivedColumn: N
+            heading {
+                heading: Problema
+            }
+            layout {
+                sequence: 40
+            }
+        )
+    )
+
+    region trazabilidad (
+        name: Trazabilidad de movimientos del módulo
+        type: classicReport
+        source {
+            location: localDatabase
+            type: sqlQuery
+            sqlQuery:
+                ```sql
+                select decode(m.tipo_documento, 'CNV', 'Conversión', 'TRF', 'Transferencia', 'PRO', 'Producción')
+                       || ' ' || m.nro_documento documento,
+                       m.operacion,
+                       m.fec_ent_sal,
+                       m.nro_ajuste,
+                       s.descripcion sucursal,
+                       decode(m.ind_ent_sal, 'E', 'Entrada', 'Salida') movimiento,
+                       m.cod_articulo || ' - ' || m.descripcion articulo,
+                       m.nro_lote,
+                       m.cantidad_ub,
+                       m.costo_unitario,
+                       m.total_costo,
+                       m.usuario
+                  from prwv_movimientos_modulo m
+                  join bsw_sucursales s on s.id = m.id_sucursal
+                 where m.id_empresa = :P0_ID_EMPRESA
+                   and m.fec_ent_sal between nvl(to_date(:P1707_DESDE), trunc(sysdate) - 30) and nvl(to_date(:P1707_HASTA), trunc(sysdate))
+                   and (:P1707_ID_ARTICULO is null or m.id_articulo = :P1707_ID_ARTICULO)
+                 order by m.id_entsal_cab desc
+                ```
+            pageItemsToSubmit: [
+                P1707_DESDE
+                P1707_HASTA
+                P1707_ID_ARTICULO
+            ]
+        }
+        layout {
+            sequence: 80
+            slot: body
+        }
+        appearance {
+            template: @standard
+            templateOptions: [
+                #DEFAULT#
+                t-Region--scrollBody
+            ]
+        }
+        security {
+            authorizationScheme: @derechos-consultar
+        }
+        reportLayout {
+            numberOfRows: 25
+        }
+        componentAppearance {
+            template: @standard
+            templateOptions: [
+                #DEFAULT#
+                t-Report--stretch
+                t-Report--rowHighlight
+            ]
+        }
+        pagination {
+            type: rowRangesXToYOfZWithPagination
+            displayPosition: bottomRight
+        }
+        messages {
+            whenNoDataFound: Sin movimientos en el período.
+        }
+
+        column DOCUMENTO (
+            reportColumnQueryId: 1
+            derivedColumn: N
+            heading {
+                heading: Documento
+            }
+            layout {
+                sequence: 10
+            }
+        )
+
+        column OPERACION (
+            reportColumnQueryId: 2
+            derivedColumn: N
+            heading {
+                heading: Operación
+            }
+            layout {
+                sequence: 20
+            }
+        )
+
+        column FEC_ENT_SAL (
+            reportColumnQueryId: 3
+            derivedColumn: N
+            heading {
+                heading: Fecha
+            }
+            layout {
+                sequence: 30
+            }
+        )
+
+        column NRO_AJUSTE (
+            reportColumnQueryId: 4
+            derivedColumn: N
+            heading {
+                heading: Ajuste
+            }
+            layout {
+                sequence: 40
+            }
+        )
+
+        column SUCURSAL (
+            reportColumnQueryId: 5
+            derivedColumn: N
+            heading {
+                heading: Sucursal
+            }
+            layout {
+                sequence: 50
+            }
+        )
+
+        column MOVIMIENTO (
+            reportColumnQueryId: 6
+            derivedColumn: N
+            heading {
+                heading: Movimiento
+            }
+            layout {
+                sequence: 60
+            }
+        )
+
+        column ARTICULO (
+            reportColumnQueryId: 7
+            derivedColumn: N
+            heading {
+                heading: Artículo
+            }
+            layout {
+                sequence: 70
+            }
+        )
+
+        column NRO_LOTE (
+            reportColumnQueryId: 8
+            derivedColumn: N
+            heading {
+                heading: Lote
+            }
+            layout {
+                sequence: 80
+            }
+        )
+
+        column CANTIDAD_UB (
+            reportColumnQueryId: 9
+            derivedColumn: N
+            heading {
+                heading: Cantidad (UB)
+                alignment: end
+            }
+            layout {
+                sequence: 90
+                columnAlignment: end
+            }
+            appearance {
+                formatMask: 999G999G999G990D00
+            }
+        )
+
+        column COSTO_UNITARIO (
+            reportColumnQueryId: 10
+            derivedColumn: N
+            heading {
+                heading: Costo unit.
+                alignment: end
+            }
+            layout {
+                sequence: 100
+                columnAlignment: end
+            }
+            appearance {
+                formatMask: 999G999G999G990D00
+            }
+        )
+
+        column TOTAL_COSTO (
+            reportColumnQueryId: 11
+            derivedColumn: N
+            heading {
+                heading: Costo total
+                alignment: end
+            }
+            layout {
+                sequence: 110
+                columnAlignment: end
+            }
+            appearance {
+                formatMask: 999G999G999G990
+            }
+        )
+
+        column USUARIO (
+            reportColumnQueryId: 12
+            derivedColumn: N
+            heading {
+                heading: Usuario
+            }
+            layout {
+                sequence: 120
+            }
+        )
+    )
+
+    pageItem P1707_DESDE (
+        type: datePicker
+        label {
+            label: Desde
+        }
+        layout {
+            sequence: 10
+            region: @filtros
+            slot: regionBody
+            columnSpan: 2
+        }
+        appearance {
+            template: @optional
+            templateOptions: #DEFAULT#
+        }
+        default {
+            type: expression
+            plsqlExpression: trunc(sysdate) - 30
+        }
+    )
+
+    pageItem P1707_HASTA (
+        type: datePicker
+        label {
+            label: Hasta
+        }
+        layout {
+            sequence: 20
+            region: @filtros
+            slot: regionBody
+            startNewRow: false
+            columnSpan: 2
+        }
+        appearance {
+            template: @optional
+            templateOptions: #DEFAULT#
+        }
+        default {
+            type: expression
+            plsqlExpression: trunc(sysdate)
+        }
+    )
+
+    pageItem P1707_ID_ARTICULO (
+        type: popupLov
+        label {
+            label: Artículo (trazabilidad)
+        }
+        settings {
+            displayAs: modalDialog
+        }
+        lov {
+            type: sharedComponent
+            lov: @lv-articulos-descripcion
+        }
+        layout {
+            sequence: 30
+            region: @filtros
+            slot: regionBody
+            startNewRow: false
+            columnSpan: 4
+        }
+        appearance {
+            template: @optional
+            templateOptions: #DEFAULT#
+        }
+    )
+
+    pageItem P1707_SOLO_PROBLEMAS (
+        type: checkbox
+        label {
+            label: Solo fuera de tolerancia
+        }
+        settings {
+            useDefaults: false
+            checkedValue: S
+            uncheckedValue: N
+        }
+        layout {
+            sequence: 40
+            region: @filtros
+            slot: regionBody
+            startNewRow: false
+            columnSpan: 2
+        }
+        appearance {
+            template: @optional
+            templateOptions: #DEFAULT#
+        }
+        default {
+            type: static
+            staticValue: N
+        }
+    )
+
+    dynamicAction filtrar (
+        name: Filtrar
+        execution {
+            sequence: 10
+        }
+        when {
+            event: change
+            selectionType: items
+            items: [
+                P1707_DESDE
+                P1707_HASTA
+                P1707_ID_ARTICULO
+                P1707_SOLO_PROBLEMAS
+            ]
+        }
+
+        action native-refresh (
+            action: refresh
+            affectedElements {
+                selectionType: region
+                region: @rendimiento
+            }
+            execution {
+                sequence: 10
+                fireOnInit: false
+            }
+        )
+
+        action native-refresh-2 (
+            action: refresh
+            affectedElements {
+                selectionType: region
+                region: @costos
+            }
+            execution {
+                sequence: 20
+                fireOnInit: false
+            }
+        )
+
+        action native-refresh-3 (
+            action: refresh
+            affectedElements {
+                selectionType: region
+                region: @trazabilidad
+            }
+            execution {
+                sequence: 30
+                fireOnInit: false
+            }
+        )
+
+    )
+
+)

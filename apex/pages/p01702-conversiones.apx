@@ -1,0 +1,612 @@
+page 1702 (
+    name: Conversiones
+    alias: CONVERSIONES
+    title: Conversiones
+    appearance {
+        pageTemplate: @standard
+        templateOptions: #DEFAULT#
+    }
+    navigation {
+        cursorFocus: doNotFocusCursor
+    }
+    security {
+        authorizationScheme: @derecho-pagina-2
+        pageAccessProtection: argumentsMustHaveChecksum
+        formAutoComplete: false
+    }
+
+    region filtros (
+        name: Filtros
+        type: staticContent
+        layout {
+            sequence: 10
+            slot: body
+        }
+        appearance {
+            template: @standard
+            templateOptions: [
+                #DEFAULT#
+                t-Region--scrollBody
+            ]
+        }
+    )
+
+    region conversiones (
+        name: Conversiones
+        type: classicReport
+        source {
+            location: localDatabase
+            type: sqlQuery
+            sqlQuery:
+                ```sql
+                select c.id,
+                       c.ser_comprobante || '-' || c.nro_comprobante numero,
+                       c.fec_comprobante,
+                       s.descripcion sucursal,
+                       decode(c.tipo_costo, 'C', 'Con costo', 'Sin costo') tipo,
+                       decode(c.origen, 'R', 'Compra', 'Manual') origen,
+                       decode(c.estado, 'P', 'Pendiente', 'C', 'Confirmada', 'A', 'Anulada') estado,
+                       c.costo_total,
+                       (select listagg(a.descripcion, ', ') within group (order by r.nro_orden)
+                          from prw_conversion_res r
+                          join stw_articulos a on a.id = r.id_articulo
+                         where r.id_conversion = c.id) resultados,
+                       c.motivo,
+                       c.cod_usu_alta usuario
+                  from prw_conversiones_cab c
+                  join bsw_sucursales s on s.id = c.id_sucursal
+                 where c.id_empresa = :P0_ID_EMPRESA
+                   and (:P1702_ESTADO is null or c.estado = :P1702_ESTADO)
+                   and c.fec_comprobante >= nvl(to_date(:P1702_DESDE), trunc(sysdate) - 30)
+                 order by c.fec_comprobante desc, c.nro_comprobante desc
+                ```
+            pageItemsToSubmit: [
+                P1702_ESTADO
+                P1702_DESDE
+            ]
+        }
+        layout {
+            sequence: 20
+            slot: body
+        }
+        appearance {
+            template: @standard
+            templateOptions: [
+                #DEFAULT#
+                t-Region--scrollBody
+            ]
+        }
+        security {
+            authorizationScheme: @derechos-consultar
+        }
+        reportLayout {
+            numberOfRows: 50
+        }
+        componentAppearance {
+            template: @standard
+            templateOptions: [
+                #DEFAULT#
+                t-Report--stretch
+                t-Report--rowHighlight
+            ]
+        }
+        pagination {
+            type: rowRangesXToYOfZWithPagination
+            displayPosition: bottomRight
+        }
+        messages {
+            whenNoDataFound: No hay conversiones para los filtros indicados.
+        }
+
+        column ID (
+            reportColumnQueryId: 1
+            derivedColumn: N
+            type: hidden
+            layout {
+                sequence: 10
+            }
+        )
+
+        column NUMERO (
+            reportColumnQueryId: 2
+            derivedColumn: N
+            type: link
+            heading {
+                heading: Número
+            }
+            layout {
+                sequence: 20
+            }
+            link {
+                target: {
+                    page: 1703
+                    clearCache: 1703
+                    items: {
+                        P1703_ID: #ID#
+                    }
+                }
+                linkText: #NUMERO#
+            }
+        )
+
+        column FEC_COMPROBANTE (
+            reportColumnQueryId: 3
+            derivedColumn: N
+            heading {
+                heading: Fecha
+            }
+            layout {
+                sequence: 30
+            }
+        )
+
+        column SUCURSAL (
+            reportColumnQueryId: 4
+            derivedColumn: N
+            heading {
+                heading: Sucursal
+            }
+            layout {
+                sequence: 40
+            }
+        )
+
+        column TIPO (
+            reportColumnQueryId: 5
+            derivedColumn: N
+            heading {
+                heading: Tipo
+            }
+            layout {
+                sequence: 50
+            }
+        )
+
+        column ORIGEN (
+            reportColumnQueryId: 6
+            derivedColumn: N
+            heading {
+                heading: Origen
+            }
+            layout {
+                sequence: 60
+            }
+        )
+
+        column ESTADO (
+            reportColumnQueryId: 7
+            derivedColumn: N
+            heading {
+                heading: Estado
+            }
+            layout {
+                sequence: 70
+            }
+        )
+
+        column COSTO_TOTAL (
+            reportColumnQueryId: 8
+            derivedColumn: N
+            heading {
+                heading: Costo total
+                alignment: end
+            }
+            layout {
+                sequence: 80
+                columnAlignment: end
+            }
+            appearance {
+                formatMask: 999G999G999G990
+            }
+        )
+
+        column RESULTADOS (
+            reportColumnQueryId: 9
+            derivedColumn: N
+            heading {
+                heading: Resultados
+            }
+            layout {
+                sequence: 90
+            }
+        )
+
+        column MOTIVO (
+            reportColumnQueryId: 10
+            derivedColumn: N
+            heading {
+                heading: Motivo
+            }
+            layout {
+                sequence: 100
+            }
+        )
+
+        column USUARIO (
+            reportColumnQueryId: 11
+            derivedColumn: N
+            heading {
+                heading: Usuario
+            }
+            layout {
+                sequence: 110
+            }
+        )
+    )
+
+    region compras-pendientes (
+        name: Compras pendientes de conversión a insumo genérico
+        type: classicReport
+        source {
+            location: localDatabase
+            type: sqlQuery
+            sqlQuery:
+                ```sql
+                select v.tip_comprobante || ' ' || v.ser_comprobante || '-' || v.nro_comprobante compra,
+                       v.fec_comprobante,
+                       v.cod_articulo,
+                       v.descripcion marca,
+                       v.cantidad_ub,
+                       v.factor_ub,
+                       v.cantidad_generico,
+                       g.descripcion generico
+                  from prwv_compras_pend_conversion v
+                  join stw_articulos g on g.id = v.id_generico
+                 where v.id_empresa = :P0_ID_EMPRESA
+                 order by v.fec_comprobante desc
+                ```
+        }
+        layout {
+            sequence: 30
+            slot: body
+        }
+        appearance {
+            template: @standard
+            templateOptions: [
+                #DEFAULT#
+                t-Region--scrollBody
+            ]
+        }
+        reportLayout {
+            numberOfRows: 20
+        }
+        componentAppearance {
+            template: @standard
+            templateOptions: [
+                #DEFAULT#
+                t-Report--stretch
+            ]
+        }
+        pagination {
+            type: rowRangesXToYOfZWithPagination
+            displayPosition: bottomRight
+        }
+        messages {
+            whenNoDataFound: No hay compras pendientes de conversión.
+        }
+
+        column COMPRA (
+            reportColumnQueryId: 1
+            derivedColumn: N
+            heading {
+                heading: Compra
+            }
+            layout {
+                sequence: 10
+            }
+        )
+
+        column FEC_COMPROBANTE (
+            reportColumnQueryId: 2
+            derivedColumn: N
+            heading {
+                heading: Fecha
+            }
+            layout {
+                sequence: 20
+            }
+        )
+
+        column COD_ARTICULO (
+            reportColumnQueryId: 3
+            derivedColumn: N
+            heading {
+                heading: Código
+            }
+            layout {
+                sequence: 30
+            }
+        )
+
+        column MARCA (
+            reportColumnQueryId: 4
+            derivedColumn: N
+            heading {
+                heading: Marca comprada
+            }
+            layout {
+                sequence: 40
+            }
+        )
+
+        column CANTIDAD_UB (
+            reportColumnQueryId: 5
+            derivedColumn: N
+            heading {
+                heading: Cantidad (UB marca)
+                alignment: end
+            }
+            layout {
+                sequence: 50
+                columnAlignment: end
+            }
+        )
+
+        column FACTOR_UB (
+            reportColumnQueryId: 6
+            derivedColumn: N
+            heading {
+                heading: Factor
+                alignment: end
+            }
+            layout {
+                sequence: 60
+                columnAlignment: end
+            }
+        )
+
+        column CANTIDAD_GENERICO (
+            reportColumnQueryId: 7
+            derivedColumn: N
+            heading {
+                heading: Cantidad genérico
+                alignment: end
+            }
+            layout {
+                sequence: 70
+                columnAlignment: end
+            }
+        )
+
+        column GENERICO (
+            reportColumnQueryId: 8
+            derivedColumn: N
+            heading {
+                heading: Genérico
+            }
+            layout {
+                sequence: 80
+            }
+        )
+    )
+
+    pageItem P1702_ESTADO (
+        type: selectList
+        label {
+            label: Estado
+        }
+        lov {
+            type: staticValues
+            staticValues: STATIC:Pendientes;P,Confirmadas;C,Anuladas;A
+            displayNullValue: true
+            nullDisplayValue: Todas
+        }
+        layout {
+            sequence: 10
+            region: @filtros
+            slot: regionBody
+            columnSpan: 3
+        }
+        appearance {
+            template: @optional
+            templateOptions: #DEFAULT#
+        }
+    )
+
+    pageItem P1702_DESDE (
+        type: datePicker
+        label {
+            label: Desde
+        }
+        layout {
+            sequence: 20
+            region: @filtros
+            slot: regionBody
+            startNewRow: false
+            columnSpan: 3
+        }
+        appearance {
+            template: @optional
+            templateOptions: #DEFAULT#
+        }
+        default {
+            type: expression
+            plsqlExpression: trunc(sysdate) - 30
+        }
+    )
+
+    pageItem P1702_ID_COMPRA (
+        type: selectList
+        label {
+            label: Generar desde la compra
+        }
+        lov {
+            type: sqlQuery
+            sqlQuery:
+                ```sql
+                select distinct v.tip_comprobante || ' ' || v.ser_comprobante || '-' || v.nro_comprobante
+                       || ' (' || to_char(v.fec_comprobante, 'dd/mm/yyyy') || ')' d,
+                       v.id_compra_cab r
+                  from prwv_compras_pend_conversion v
+                 where v.id_empresa = :P0_ID_EMPRESA
+                 order by 1
+                ```
+            displayNullValue: true
+            nullDisplayValue: - Seleccione una compra -
+        }
+        layout {
+            sequence: 30
+            region: @filtros
+            slot: regionBody
+            startNewRow: false
+            columnSpan: 4
+        }
+        appearance {
+            template: @optional
+            templateOptions: #DEFAULT#
+        }
+    )
+
+    button create (
+        buttonName: CREATE
+        label: Nueva conversión
+        layout {
+            sequence: 10
+            region: @conversiones
+            slot: create
+        }
+        appearance {
+            buttonTemplate: @text-with-icon
+            hot: true
+            templateOptions: [
+                #DEFAULT#
+                t-Button--iconLeft
+            ]
+            icon: fa-plus
+        }
+        behavior {
+            action: redirectThisApp
+            target: {
+                page: 1703
+                clearCache: 1703
+            }
+            warnOnUnsavedChanges: doNotCheck
+        }
+        security {
+            authorizationScheme: @derechos-insertar-2
+        }
+    )
+
+    button generar (
+        buttonName: GENERAR
+        label: Generar conversión
+        layout {
+            sequence: 20
+            region: @filtros
+            slot: regionBody
+        }
+        appearance {
+            buttonTemplate: @text-with-icon
+            templateOptions: [
+                #DEFAULT#
+                t-Button--iconLeft
+            ]
+            icon: fa-exchange
+        }
+        behavior {
+            warnOnUnsavedChanges: doNotCheck
+        }
+        security {
+            authorizationScheme: @derechos-insertar-2
+        }
+    )
+
+    validation compra-seleccionada (
+        name: Compra seleccionada
+        execution {
+            sequence: 10
+        }
+        validation {
+            type: itemIsNotNull
+            item: P1702_ID_COMPRA
+        }
+        error {
+            errorMessage: Seleccione la compra a convertir.
+            displayLocation: inlineWithFieldAndInNotification
+            associatedItem: @P1702_ID_COMPRA
+        }
+        serverSideCondition {
+            whenButtonPressed: @generar
+        }
+    )
+
+    process generar-conversion (
+        name: Generar conversión desde compra
+        type: executeCode
+        source {
+            plsqlCode:
+                ```plsql
+                declare
+                   l_id_conversion prw_conversiones_cab.id%type;
+                begin
+                   prwk_produccion.generar_conversion_compra(p_id_compra_cab => :P1702_ID_COMPRA,
+                                                             p_id_conversion => l_id_conversion);
+                   :P1702_ID_COMPRA := null;
+                end;
+                ```
+        }
+        execution {
+            sequence: 10
+        }
+        successMessage {
+            successMessage: Conversión generada en estado pendiente. Revísela y confírmela.
+        }
+        serverSideCondition {
+            whenButtonPressed: @generar
+        }
+    )
+
+    dynamicAction filtrar (
+        name: Filtrar
+        execution {
+            sequence: 10
+        }
+        when {
+            event: change
+            selectionType: items
+            items: [
+                P1702_ESTADO
+                P1702_DESDE
+            ]
+        }
+
+        action native-refresh (
+            action: refresh
+            affectedElements {
+                selectionType: region
+                region: @conversiones
+            }
+            execution {
+                sequence: 10
+                fireOnInit: false
+            }
+        )
+
+    )
+
+    dynamicAction dialogo-cerrado (
+        name: Diálogo cerrado
+        execution {
+            sequence: 20
+        }
+        when {
+            event: apexafterclosedialog
+            selectionType: region
+            region: @conversiones
+        }
+
+        action native-refresh (
+            action: refresh
+            affectedElements {
+                selectionType: region
+                region: @conversiones
+            }
+            execution {
+                sequence: 10
+                fireOnInit: false
+            }
+        )
+
+    )
+
+)

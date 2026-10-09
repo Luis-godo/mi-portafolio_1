@@ -1,0 +1,1397 @@
+page 1703 (
+    name: Carga de Conversión
+    alias: CARGA-DE-CONVERSION
+    title: Conversión
+    appearance {
+        pageMode: modalDialog
+        dialogTemplate: @modal-dialog
+        templateOptions: #DEFAULT#
+    }
+    dialog {
+        width: 1300
+        height: 820
+        chained: false
+    }
+    navigation {
+        cursorFocus: doNotFocusCursor
+    }
+    security {
+        authorizationScheme: @derecho-pagina-2
+        pageAccessProtection: argumentsMustHaveChecksum
+        formAutoComplete: false
+    }
+
+    region buttons (
+        name: Buttons
+        type: staticContent
+        layout {
+            sequence: 40
+            slot: dialogFooter
+        }
+        appearance {
+            template: @buttons-container
+            templateOptions: #DEFAULT#
+        }
+        settings {
+            outputAs: text
+        }
+    )
+
+    region conversion (
+        name: Conversión
+        type: form
+        source {
+            location: localDatabase
+            tableName: PRW_CONVERSIONES_CAB
+            whereClause: ID_EMPRESA = :P0_ID_EMPRESA
+        }
+        layout {
+            sequence: 10
+            slot: contentBody
+        }
+        appearance {
+            template: @standard
+            templateOptions: [
+                #DEFAULT#
+                t-Region--scrollBody
+            ]
+        }
+        security {
+            authorizationScheme: @derechos-consultar
+        }
+        edit {
+            enabled: true
+            allowedOperations: [
+                add
+                update
+                delete
+            ]
+        }
+        editAuthorization {
+            add: @derechos-insertar-2
+            update: @derechos-actualizar-2
+            delete: @derechos-borrar-2
+        }
+    )
+
+    region insumos (
+        name: Insumos consumidos
+        type: interactiveGrid
+        source {
+            location: localDatabase
+            tableName: PRW_CONVERSIONES_ING
+            whereClause: ID_CONVERSION = :P1703_ID
+            pageItemsToSubmit: P1703_ID
+        }
+        layout {
+            sequence: 20
+            slot: contentBody
+        }
+        appearance {
+            template: @standard
+            templateOptions: [
+                #DEFAULT#
+                t-Region--scrollBody
+            ]
+        }
+        advanced {
+            htmlDomId: Insumos
+        }
+        edit {
+            enabled: true
+            allowedOperations: [
+                add
+                update
+                delete
+            ]
+        }
+        toolbar {
+            controls: actionsMenu
+        }
+
+        savedReport primary (
+            visibility: primary
+            view {
+                default: grid
+            }
+            singleRowView {
+                displayedColumns: true
+            }
+        )
+
+        column APEX$ROW_ACTION (
+            type: actionsMenu
+            layout {
+                sequence: 10
+            }
+        )
+
+        column APEX$ROW_SELECTOR (
+            type: rowSelector
+            layout {
+                sequence: 20
+            }
+        )
+
+        column ID (
+            type: hidden
+            layout {
+                sequence: 30
+            }
+            source {
+                databaseColumn: ID
+                dataType: number
+                primaryKey: true
+            }
+        )
+
+        column ID_CONVERSION (
+            type: hidden
+            layout {
+                sequence: 40
+            }
+            source {
+                databaseColumn: ID_CONVERSION
+                dataType: number
+            }
+        )
+
+        column ID_EMPRESA (
+            type: hidden
+            layout {
+                sequence: 50
+            }
+            source {
+                databaseColumn: ID_EMPRESA
+                dataType: number
+            }
+            default {
+                type: expression
+                plsqlExpression: :P0_ID_EMPRESA
+            }
+        )
+
+        column NRO_ORDEN (
+            type: numberField
+            heading {
+                heading: Nº
+                alignment: end
+            }
+            layout {
+                sequence: 60
+                columnAlignment: end
+            }
+            source {
+                databaseColumn: NRO_ORDEN
+                dataType: number
+            }
+        )
+
+        column ID_ARTICULO (
+            type: popupLov
+            heading {
+                heading: Artículo
+            }
+            settings {
+                displayAs: modalDialog
+            }
+            lov {
+                type: sharedComponent
+                lov: @lv-articulos-descripcion
+            }
+            layout {
+                sequence: 70
+            }
+            validation {
+                valueRequired: true
+            }
+            source {
+                databaseColumn: ID_ARTICULO
+                dataType: number
+            }
+        )
+
+        column ID_LOTE (
+            type: selectList
+            heading {
+                heading: Lote
+            }
+            lov {
+                type: sqlQuery
+                sqlQuery:
+                    ```sql
+                    select l.nro_lote || nvl2(l.fec_vencimiento, ' (vence ' || to_char(l.fec_vencimiento, 'dd/mm/yyyy') || ')', null) d,
+                           l.id r
+                      from stw_lotes l
+                     where l.id_articulo = :ID_ARTICULO
+                       and l.id_empresa = :P0_ID_EMPRESA
+                     order by l.nro_lote
+                    ```
+                displayNullValue: true
+                nullDisplayValue: Lote por defecto
+            }
+            cascadingLov {
+                parentColumns: ID_ARTICULO
+                itemsToSubmit: ID_ARTICULO
+            }
+            layout {
+                sequence: 80
+            }
+            source {
+                databaseColumn: ID_LOTE
+                dataType: number
+            }
+        )
+
+        column ID_UNIDAD_MEDIDA (
+            type: selectList
+            heading {
+                heading: UM
+            }
+            lov {
+                type: sharedComponent
+                lov: @relaciones-um-lv
+                displayNullValue: false
+            }
+            cascadingLov {
+                parentColumns: ID_ARTICULO
+                itemsToSubmit: ID_ARTICULO
+            }
+            layout {
+                sequence: 90
+            }
+            validation {
+                valueRequired: true
+            }
+            source {
+                databaseColumn: ID_UNIDAD_MEDIDA
+                dataType: number
+            }
+        )
+
+        column CANTIDAD (
+            type: numberField
+            heading {
+                heading: Cantidad
+                alignment: end
+            }
+            layout {
+                sequence: 100
+                columnAlignment: end
+            }
+            validation {
+                valueRequired: true
+            }
+            source {
+                databaseColumn: CANTIDAD
+                dataType: number
+            }
+        )
+
+        column CANTIDAD_UB (
+            type: numberField
+            heading {
+                heading: Cantidad (UB)
+                alignment: end
+            }
+            layout {
+                sequence: 110
+                columnAlignment: end
+            }
+            source {
+                databaseColumn: CANTIDAD_UB
+                dataType: number
+            }
+            readOnly {
+                type: always
+            }
+        )
+
+        column COSTO_UNITARIO (
+            type: numberField
+            heading {
+                heading: Costo unit. (UB)
+                alignment: end
+            }
+            layout {
+                sequence: 120
+                columnAlignment: end
+            }
+            appearance {
+                formatMask: 999G999G999G990D00
+            }
+            source {
+                databaseColumn: COSTO_UNITARIO
+                dataType: number
+            }
+            readOnly {
+                type: always
+            }
+        )
+
+        column COSTO_TOTAL (
+            type: numberField
+            heading {
+                heading: Costo total
+                alignment: end
+            }
+            layout {
+                sequence: 130
+                columnAlignment: end
+            }
+            appearance {
+                formatMask: 999G999G999G990
+            }
+            source {
+                databaseColumn: COSTO_TOTAL
+                dataType: number
+            }
+            readOnly {
+                type: always
+            }
+        )
+
+        column ID_COMPRA_DET (
+            type: hidden
+            layout {
+                sequence: 140
+            }
+            source {
+                databaseColumn: ID_COMPRA_DET
+                dataType: number
+            }
+        )
+    )
+
+    region resultados (
+        name: Resultados obtenidos
+        type: interactiveGrid
+        source {
+            location: localDatabase
+            tableName: PRW_CONVERSION_RES
+            whereClause: ID_CONVERSION = :P1703_ID
+            pageItemsToSubmit: P1703_ID
+        }
+        layout {
+            sequence: 30
+            slot: contentBody
+        }
+        appearance {
+            template: @standard
+            templateOptions: [
+                #DEFAULT#
+                t-Region--scrollBody
+            ]
+        }
+        advanced {
+            htmlDomId: Resultados
+        }
+        edit {
+            enabled: true
+            allowedOperations: [
+                add
+                update
+                delete
+            ]
+        }
+        toolbar {
+            controls: actionsMenu
+        }
+
+        savedReport primary (
+            visibility: primary
+            view {
+                default: grid
+            }
+            singleRowView {
+                displayedColumns: true
+            }
+        )
+
+        column APEX$ROW_ACTION (
+            type: actionsMenu
+            layout {
+                sequence: 10
+            }
+        )
+
+        column APEX$ROW_SELECTOR (
+            type: rowSelector
+            layout {
+                sequence: 20
+            }
+        )
+
+        column ID (
+            type: hidden
+            layout {
+                sequence: 30
+            }
+            source {
+                databaseColumn: ID
+                dataType: number
+                primaryKey: true
+            }
+        )
+
+        column ID_CONVERSION (
+            type: hidden
+            layout {
+                sequence: 40
+            }
+            source {
+                databaseColumn: ID_CONVERSION
+                dataType: number
+            }
+        )
+
+        column ID_EMPRESA (
+            type: hidden
+            layout {
+                sequence: 50
+            }
+            source {
+                databaseColumn: ID_EMPRESA
+                dataType: number
+            }
+            default {
+                type: expression
+                plsqlExpression: :P0_ID_EMPRESA
+            }
+        )
+
+        column NRO_ORDEN (
+            type: numberField
+            heading {
+                heading: Nº
+                alignment: end
+            }
+            layout {
+                sequence: 60
+                columnAlignment: end
+            }
+            source {
+                databaseColumn: NRO_ORDEN
+                dataType: number
+            }
+        )
+
+        column ID_ARTICULO (
+            type: popupLov
+            heading {
+                heading: Artículo resultante
+            }
+            settings {
+                displayAs: modalDialog
+            }
+            lov {
+                type: sharedComponent
+                lov: @lv-articulos-descripcion
+            }
+            layout {
+                sequence: 70
+            }
+            validation {
+                valueRequired: true
+            }
+            source {
+                databaseColumn: ID_ARTICULO
+                dataType: number
+            }
+        )
+
+        column ID_UNIDAD_MEDIDA (
+            type: selectList
+            heading {
+                heading: UM
+            }
+            lov {
+                type: sharedComponent
+                lov: @relaciones-um-lv
+                displayNullValue: false
+            }
+            cascadingLov {
+                parentColumns: ID_ARTICULO
+                itemsToSubmit: ID_ARTICULO
+            }
+            layout {
+                sequence: 80
+            }
+            validation {
+                valueRequired: true
+            }
+            source {
+                databaseColumn: ID_UNIDAD_MEDIDA
+                dataType: number
+            }
+        )
+
+        column CANTIDAD (
+            type: numberField
+            heading {
+                heading: Cantidad
+                alignment: end
+            }
+            layout {
+                sequence: 90
+                columnAlignment: end
+            }
+            validation {
+                valueRequired: true
+            }
+            source {
+                databaseColumn: CANTIDAD
+                dataType: number
+            }
+        )
+
+        column ARTICULO_PRINCIPAL (
+            type: selectList
+            heading {
+                heading: Principal
+            }
+            lov {
+                type: staticValues
+                staticValues: STATIC:Sí;S,No;N
+                displayNullValue: false
+            }
+            layout {
+                sequence: 100
+            }
+            source {
+                databaseColumn: ARTICULO_PRINCIPAL
+                dataType: varchar2
+            }
+            default {
+                type: static
+                staticValue: N
+            }
+        )
+
+        column PORC_COSTO (
+            type: numberField
+            heading {
+                heading: % del costo
+                alignment: end
+            }
+            layout {
+                sequence: 110
+                columnAlignment: end
+            }
+            source {
+                databaseColumn: PORC_COSTO
+                dataType: number
+            }
+        )
+
+        column COSTO_UNITARIO_INF (
+            type: numberField
+            heading {
+                heading: Costo unit. subproducto
+                alignment: end
+            }
+            layout {
+                sequence: 120
+                columnAlignment: end
+            }
+            source {
+                databaseColumn: COSTO_UNITARIO_INF
+                dataType: number
+            }
+        )
+
+        column NRO_LOTE (
+            type: textField
+            heading {
+                heading: Lote
+            }
+            layout {
+                sequence: 130
+            }
+            source {
+                databaseColumn: NRO_LOTE
+                dataType: varchar2
+            }
+        )
+
+        column FEC_VENCIMIENTO (
+            type: datePicker
+            heading {
+                heading: Vencimiento
+            }
+            layout {
+                sequence: 140
+            }
+            source {
+                databaseColumn: FEC_VENCIMIENTO
+                dataType: date
+            }
+        )
+
+        column CANTIDAD_UB (
+            type: numberField
+            heading {
+                heading: Cantidad (UB)
+                alignment: end
+            }
+            layout {
+                sequence: 150
+                columnAlignment: end
+            }
+            source {
+                databaseColumn: CANTIDAD_UB
+                dataType: number
+            }
+            readOnly {
+                type: always
+            }
+        )
+
+        column COSTO_TOTAL (
+            type: numberField
+            heading {
+                heading: Costo asignado
+                alignment: end
+            }
+            layout {
+                sequence: 160
+                columnAlignment: end
+            }
+            appearance {
+                formatMask: 999G999G999G990
+            }
+            source {
+                databaseColumn: COSTO_TOTAL
+                dataType: number
+            }
+            readOnly {
+                type: always
+            }
+        )
+
+        column COSTO_UNITARIO (
+            type: numberField
+            heading {
+                heading: Costo unit. (UB)
+                alignment: end
+            }
+            layout {
+                sequence: 170
+                columnAlignment: end
+            }
+            appearance {
+                formatMask: 999G999G999G990D00
+            }
+            source {
+                databaseColumn: COSTO_UNITARIO
+                dataType: number
+            }
+            readOnly {
+                type: always
+            }
+        )
+
+        column ID_LOTE (
+            type: hidden
+            layout {
+                sequence: 180
+            }
+            source {
+                databaseColumn: ID_LOTE
+                dataType: number
+            }
+        )
+    )
+
+    pageItem P1703_ID (
+        type: hidden
+        layout {
+            sequence: 10
+            region: @conversion
+            slot: regionBody
+        }
+        source {
+            formRegion: @conversion
+            column: ID
+            dataType: number
+            primaryKey: true
+        }
+        security {
+            sessionStateProtection: checksumRequiredSessionLevel
+        }
+    )
+
+    pageItem P1703_ID_EMPRESA (
+        type: hidden
+        layout {
+            sequence: 20
+            region: @conversion
+            slot: regionBody
+        }
+        source {
+            formRegion: @conversion
+            column: ID_EMPRESA
+            dataType: number
+        }
+        default {
+            type: expression
+            plsqlExpression: :P0_ID_EMPRESA
+        }
+        security {
+            sessionStateProtection: checksumRequiredSessionLevel
+        }
+    )
+
+    pageItem P1703_ESTADO (
+        type: hidden
+        layout {
+            sequence: 30
+            region: @conversion
+            slot: regionBody
+        }
+        source {
+            type: sqlQuerySingleValue
+            sqlQuery: select estado from prw_conversiones_cab where id = :P1703_ID
+            used: always
+        }
+        security {
+            sessionStateProtection: checksumRequiredSessionLevel
+        }
+    )
+
+    pageItem P1703_RESUMEN (
+        type: displayOnly
+        label {
+            label: Comprobante
+        }
+        layout {
+            sequence: 40
+            region: @conversion
+            slot: regionBody
+        }
+        appearance {
+            template: @optional
+            templateOptions: #DEFAULT#
+        }
+        source {
+            type: sqlQuerySingleValue
+            sqlQuery:
+                ```sql
+                select c.tip_comprobante || ' ' || c.ser_comprobante || '-' || c.nro_comprobante
+                       || ' · ' || decode(c.estado, 'P', 'Pendiente', 'C', 'Confirmada', 'A', 'Anulada')
+                       || decode(c.origen, 'R', ' · generada desde una compra', null)
+                       || ' · costo insumos ' || to_char(nvl(c.costo_insumos, 0), 'fm999G999G999G990')
+                       || ' · costo total ' || to_char(nvl(c.costo_total, 0), 'fm999G999G999G990')
+                  from prw_conversiones_cab c
+                 where c.id = :P1703_ID
+                ```
+            used: always
+        }
+        serverSideCondition {
+            type: itemIsNotNull
+            item: P1703_ID
+        }
+    )
+
+    pageItem P1703_FEC_COMPROBANTE (
+        type: datePicker
+        label {
+            label: Fecha
+        }
+        layout {
+            sequence: 50
+            region: @conversion
+            slot: regionBody
+            columnSpan: 3
+        }
+        appearance {
+            template: @required
+            templateOptions: #DEFAULT#
+        }
+        validation {
+            valueRequired: true
+        }
+        source {
+            formRegion: @conversion
+            column: FEC_COMPROBANTE
+            dataType: date
+        }
+        default {
+            type: expression
+            plsqlExpression: trunc(sysdate)
+        }
+        readOnly {
+            type: expression
+            plsqlExpression: nvl(:P1703_ESTADO, 'P') != 'P'
+        }
+    )
+
+    pageItem P1703_ID_SUCURSAL (
+        type: selectList
+        label {
+            label: Sucursal
+        }
+        lov {
+            type: sharedComponent
+            lov: @lv-sucursales
+            displayNullValue: false
+        }
+        layout {
+            sequence: 60
+            region: @conversion
+            slot: regionBody
+            startNewRow: false
+            columnSpan: 3
+        }
+        appearance {
+            template: @required
+            templateOptions: #DEFAULT#
+        }
+        validation {
+            valueRequired: true
+        }
+        source {
+            formRegion: @conversion
+            column: ID_SUCURSAL
+            dataType: number
+        }
+        default {
+            type: expression
+            plsqlExpression: :P0_ID_SUCURSAL
+        }
+        readOnly {
+            type: expression
+            plsqlExpression: nvl(:P1703_ESTADO, 'P') != 'P'
+        }
+    )
+
+    pageItem P1703_TIPO_COSTO (
+        type: selectList
+        label {
+            label: Tipo de costo
+        }
+        lov {
+            type: staticValues
+            staticValues: STATIC:Con costo (el valor pasa a los resultados);C,Sin traslado automático (subproductos al costo informado);S
+            displayNullValue: false
+        }
+        layout {
+            sequence: 70
+            region: @conversion
+            slot: regionBody
+            startNewRow: false
+            columnSpan: 4
+        }
+        appearance {
+            template: @required
+            templateOptions: #DEFAULT#
+        }
+        validation {
+            valueRequired: true
+        }
+        source {
+            formRegion: @conversion
+            column: TIPO_COSTO
+            dataType: varchar2
+        }
+        default {
+            type: static
+            staticValue: C
+        }
+        readOnly {
+            type: expression
+            plsqlExpression: nvl(:P1703_ESTADO, 'P') != 'P'
+        }
+    )
+
+    pageItem P1703_IND_DESPOSTE (
+        type: checkbox
+        label {
+            label: Desposte
+        }
+        settings {
+            useDefaults: false
+            checkedValue: S
+            uncheckedValue: N
+        }
+        layout {
+            sequence: 80
+            region: @conversion
+            slot: regionBody
+            startNewRow: false
+            columnSpan: 2
+        }
+        appearance {
+            template: @optional
+            templateOptions: #DEFAULT#
+        }
+        source {
+            formRegion: @conversion
+            column: IND_DESPOSTE
+            dataType: varchar2
+        }
+        default {
+            type: static
+            staticValue: N
+        }
+        readOnly {
+            type: expression
+            plsqlExpression: nvl(:P1703_ESTADO, 'P') != 'P'
+        }
+    )
+
+    pageItem P1703_PORC_GASTOS_ADM (
+        type: numberField
+        label {
+            label: Gastos (% sobre insumos)
+        }
+        layout {
+            sequence: 90
+            region: @conversion
+            slot: regionBody
+            columnSpan: 3
+        }
+        appearance {
+            template: @optional
+            templateOptions: #DEFAULT#
+        }
+        source {
+            formRegion: @conversion
+            column: PORC_GASTOS_ADM
+            dataType: number
+        }
+        readOnly {
+            type: expression
+            plsqlExpression: nvl(:P1703_ESTADO, 'P') != 'P'
+        }
+    )
+
+    pageItem P1703_TOTAL_GASTOS_ADM (
+        type: numberField
+        label {
+            label: Gastos (importe)
+        }
+        layout {
+            sequence: 100
+            region: @conversion
+            slot: regionBody
+            startNewRow: false
+            columnSpan: 3
+        }
+        appearance {
+            template: @optional
+            templateOptions: #DEFAULT#
+        }
+        source {
+            formRegion: @conversion
+            column: TOTAL_GASTOS_ADM
+            dataType: number
+        }
+        readOnly {
+            type: expression
+            plsqlExpression: nvl(:P1703_ESTADO, 'P') != 'P'
+        }
+    )
+
+    pageItem P1703_MOTIVO (
+        type: textarea
+        label {
+            label: Motivo / observación
+        }
+        layout {
+            sequence: 110
+            region: @conversion
+            slot: regionBody
+        }
+        appearance {
+            template: @optional
+            templateOptions: #DEFAULT#
+        }
+        source {
+            formRegion: @conversion
+            column: MOTIVO
+            dataType: varchar2
+        }
+        readOnly {
+            type: expression
+            plsqlExpression: nvl(:P1703_ESTADO, 'P') != 'P'
+        }
+    )
+
+    pageItem P1703_MOTIVO_ANULACION (
+        type: textarea
+        label {
+            label: Motivo de la anulación
+        }
+        layout {
+            sequence: 120
+            region: @conversion
+            slot: regionBody
+        }
+        appearance {
+            template: @optional
+            templateOptions: #DEFAULT#
+        }
+        serverSideCondition {
+            type: item=value
+            item: P1703_ESTADO
+            value: C
+        }
+    )
+
+    button cancel (
+        buttonName: CANCEL
+        label: Cerrar
+        layout {
+            sequence: 10
+            region: @buttons
+            slot: close
+        }
+        appearance {
+            buttonTemplate: @text
+            templateOptions: #DEFAULT#
+        }
+        behavior {
+            action: triggerAction
+        }
+
+        triggerAction native-dialog-cancel (
+            action: cancelDialog
+            execution {
+                sequence: 10
+            }
+        )
+
+    )
+
+    button delete (
+        buttonName: DELETE
+        label: Borrar
+        layout {
+            sequence: 20
+            region: @buttons
+            slot: delete
+        }
+        appearance {
+            buttonTemplate: @text
+            templateOptions: #DEFAULT#
+            cssClasses: t-Button--danger
+        }
+        behavior {
+            executeValidations: false
+            warnOnUnsavedChanges: doNotCheck
+            databaseAction: delete
+            requiresConfirmation: true
+        }
+        confirmation {
+            message: &APP_TEXT$DELETE_MSG!RAW.
+            style: danger
+        }
+        serverSideCondition {
+            type: item=value
+            item: P1703_ESTADO
+            value: P
+        }
+        security {
+            authorizationScheme: @derechos-borrar-2
+        }
+    )
+
+    button anular (
+        buttonName: ANULAR
+        label: Anular
+        layout {
+            sequence: 30
+            region: @buttons
+            slot: delete
+        }
+        appearance {
+            buttonTemplate: @text-with-icon
+            templateOptions: [
+                #DEFAULT#
+                t-Button--iconLeft
+            ]
+            cssClasses: t-Button--danger
+            icon: fa-ban
+        }
+        behavior {
+            warnOnUnsavedChanges: doNotCheck
+            requiresConfirmation: true
+        }
+        confirmation {
+            message: Se revertirán los movimientos de stock y el costo de los resultados. ¿Anular la conversión?
+            style: danger
+        }
+        serverSideCondition {
+            type: item=value
+            item: P1703_ESTADO
+            value: C
+        }
+        security {
+            authorizationScheme: @derechos-borrar-2
+        }
+    )
+
+    button calcular (
+        buttonName: CALCULAR
+        label: Guardar y calcular costos
+        layout {
+            sequence: 40
+            region: @buttons
+            slot: next
+        }
+        appearance {
+            buttonTemplate: @text-with-icon
+            templateOptions: [
+                #DEFAULT#
+                t-Button--iconLeft
+            ]
+            icon: fa-calculator
+        }
+        behavior {
+            warnOnUnsavedChanges: doNotCheck
+            databaseAction: update
+        }
+        serverSideCondition {
+            type: item=value
+            item: P1703_ESTADO
+            value: P
+        }
+        security {
+            authorizationScheme: @derechos-actualizar-2
+        }
+    )
+
+    button confirmar (
+        buttonName: CONFIRMAR
+        label: Confirmar
+        layout {
+            sequence: 50
+            region: @buttons
+            slot: next
+        }
+        appearance {
+            buttonTemplate: @text-with-icon
+            hot: true
+            templateOptions: [
+                #DEFAULT#
+                t-Button--iconLeft
+            ]
+            icon: fa-check
+        }
+        behavior {
+            warnOnUnsavedChanges: doNotCheck
+            databaseAction: update
+            requiresConfirmation: true
+        }
+        confirmation {
+            message: Se moverá el stock de insumos y resultados y se actualizará el costo. ¿Confirmar la conversión?
+            style: warning
+        }
+        serverSideCondition {
+            type: item=value
+            item: P1703_ESTADO
+            value: P
+        }
+        security {
+            authorizationScheme: @derechos-actualizar-2
+        }
+    )
+
+    button create (
+        buttonName: CREATE
+        label: Crear
+        layout {
+            sequence: 60
+            region: @buttons
+            slot: next
+        }
+        appearance {
+            buttonTemplate: @text-with-icon
+            hot: true
+            templateOptions: [
+                #DEFAULT#
+                t-Button--iconLeft
+            ]
+            icon: fa-plus
+        }
+        behavior {
+            warnOnUnsavedChanges: doNotCheck
+            databaseAction: insert
+        }
+        serverSideCondition {
+            type: itemIsNull
+            item: P1703_ID
+        }
+        security {
+            authorizationScheme: @derechos-insertar-2
+        }
+    )
+
+    validation motivo-anulacion (
+        name: Motivo de anulación
+        execution {
+            sequence: 10
+        }
+        validation {
+            type: itemIsNotNull
+            item: P1703_MOTIVO_ANULACION
+        }
+        error {
+            errorMessage: Indique el motivo de la anulación.
+            displayLocation: inlineWithFieldAndInNotification
+            associatedItem: @P1703_MOTIVO_ANULACION
+        }
+        serverSideCondition {
+            whenButtonPressed: @anular
+        }
+    )
+
+    process initialize-form (
+        name: Inicializar formulario
+        type: formInitialization
+        formRegion: @conversion
+        execution {
+            sequence: 10
+            point: beforeHeader
+        }
+    )
+
+    process process-form (
+        name: Guardar cabecera
+        type: formAutoRowProcessing
+        formRegion: @conversion
+        execution {
+            sequence: 10
+        }
+        error {
+            errorMessage: No se pudo guardar la conversión: #SQLERRM_TEXT#
+        }
+        serverSideCondition {
+            type: requestIsContainedInValue
+            value: CREATE,DELETE,CALCULAR,CONFIRMAR
+        }
+    )
+
+    process setear-id-insumos (
+        name: Asignar conversión a los insumos
+        type: executeCode
+        editableRegion: @insumos
+        source {
+            plsqlCode: :ID_CONVERSION := :P1703_ID;
+        }
+        execution {
+            sequence: 20
+        }
+        serverSideCondition {
+            type: requestIsContainedInValue
+            value: CREATE,CALCULAR,CONFIRMAR
+        }
+    )
+
+    process guardar-insumos (
+        name: Guardar insumos
+        type: interactiveGridAutoRowProcessing
+        editableRegion: @insumos
+        execution {
+            sequence: 30
+        }
+        serverSideCondition {
+            type: requestIsContainedInValue
+            value: CREATE,CALCULAR,CONFIRMAR
+        }
+    )
+
+    process setear-id-resultados (
+        name: Asignar conversión a los resultados
+        type: executeCode
+        editableRegion: @resultados
+        source {
+            plsqlCode: :ID_CONVERSION := :P1703_ID;
+        }
+        execution {
+            sequence: 40
+        }
+        serverSideCondition {
+            type: requestIsContainedInValue
+            value: CREATE,CALCULAR,CONFIRMAR
+        }
+    )
+
+    process guardar-resultados (
+        name: Guardar resultados
+        type: interactiveGridAutoRowProcessing
+        editableRegion: @resultados
+        execution {
+            sequence: 50
+        }
+        serverSideCondition {
+            type: requestIsContainedInValue
+            value: CREATE,CALCULAR,CONFIRMAR
+        }
+    )
+
+    process calcular (
+        name: Calcular costos
+        type: executeCode
+        source {
+            plsqlCode: prwk_produccion.calcular_conversion(:P1703_ID);
+        }
+        execution {
+            sequence: 60
+        }
+        successMessage {
+            successMessage: Costos calculados. Revíselos antes de confirmar.
+        }
+        serverSideCondition {
+            whenButtonPressed: @calcular
+        }
+    )
+
+    process confirmar (
+        name: Confirmar conversión
+        type: executeCode
+        source {
+            plsqlCode: prwk_produccion.confirmar_conversion(:P1703_ID);
+        }
+        execution {
+            sequence: 70
+        }
+        successMessage {
+            successMessage: Conversión confirmada: stock y costos actualizados.
+        }
+        serverSideCondition {
+            whenButtonPressed: @confirmar
+        }
+    )
+
+    process anular (
+        name: Anular conversión
+        type: executeCode
+        source {
+            plsqlCode: prwk_produccion.anular_conversion(:P1703_ID, :P1703_MOTIVO_ANULACION);
+        }
+        execution {
+            sequence: 80
+        }
+        successMessage {
+            successMessage: Conversión anulada: se revirtieron los movimientos.
+        }
+        serverSideCondition {
+            whenButtonPressed: @anular
+        }
+    )
+
+    process close-dialog (
+        name: Cerrar diálogo
+        type: closeDialog
+        execution {
+            sequence: 90
+        }
+        serverSideCondition {
+            type: requestIsContainedInValue
+            value: DELETE,CONFIRMAR,ANULAR
+        }
+    )
+
+)
